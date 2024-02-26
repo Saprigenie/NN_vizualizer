@@ -55,6 +55,8 @@
     </ul>
   </nav>
 
+  <div id="cy"></div>
+
   <footer class="footer bg-dark">
     <div class="row text-center p-2">
       <div class="col-sm">
@@ -78,7 +80,66 @@
   </footer>
 </template>
 
+<script setup>
+import cytoscape from 'cytoscape'
+import { onMounted } from 'vue'
+
+onMounted(() => {
+  var cy = cytoscape({
+    container: document.getElementById('cy'), // container to render in
+
+    elements: [
+      // list of graph elements to start with
+      {
+        // node a
+        data: { id: 'a' }
+      },
+      {
+        // node b
+        data: { id: 'b' }
+      },
+      {
+        // edge ab
+        data: { id: 'ab', source: 'a', target: 'b' }
+      }
+    ],
+
+    style: [
+      // the stylesheet for the graph
+      {
+        selector: 'node',
+        style: {
+          'background-color': '#666',
+          label: 'data(id)'
+        }
+      },
+
+      {
+        selector: 'edge',
+        style: {
+          width: 3,
+          'line-color': '#ccc',
+          'target-arrow-color': '#ccc',
+          'target-arrow-shape': 'triangle',
+          'curve-style': 'bezier'
+        }
+      }
+    ],
+
+    layout: {
+      name: 'grid',
+      rows: 1
+    }
+  })
+})
+</script>
+
 <style scoped>
+#cy {
+  width: 100%;
+  height: 550px;
+}
+
 footer {
   position: fixed;
   bottom: 0;
