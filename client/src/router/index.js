@@ -3,9 +3,9 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 const routes = [
   {
     path: '/',
-    component: () => import('@/components/pages/Main.vue')
+    component: () => import('@/components/pages/main/Main.vue')
   },
-  { path: '/help', component: () => import('@/components/pages/Help.vue') }
+  { path: '/help', component: () => import('@/components/pages/help/Help.vue') }
 ]
 
 export const router = createRouter({
