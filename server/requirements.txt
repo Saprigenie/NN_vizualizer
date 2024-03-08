@@ -1,0 +1,4 @@
+Werkzeug==2.3.3
+Flask==2.2.3
+Flask-Cors==3.0.10
+flask-restx==1.2.0
