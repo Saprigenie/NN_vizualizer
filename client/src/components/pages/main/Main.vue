@@ -55,8 +55,29 @@
 
       <div class="vr ms-2 me-2"></div>
 
-      <li class="nav-item">
-        <button class="nav-link">Кнопка</button>
+      <li class="nav-item dropdown">
+        <button
+          class="nav-link dropdown-toggle"
+          type="button"
+          id="dropdownMenuButton2"
+          data-bs-toggle="dropdown"
+          aria-expanded="false"
+        >
+          Выбор batch size
+        </button>
+        <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton2">
+          <li>
+            <a class="dropdown-item nav-link" v-on:click=""> 1 </a>
+          </li>
+
+          <li>
+            <a class="dropdown-item nav-link" v-on:click=""> 2 </a>
+          </li>
+
+          <li>
+            <a class="dropdown-item nav-link" v-on:click=""> 5 </a>
+          </li>
+        </ul>
       </li>
     </ul>
   </nav>
