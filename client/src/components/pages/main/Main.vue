@@ -34,15 +34,21 @@
         </button>
         <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
           <li>
-            <a class="dropdown-item nav-link"> ANN (Полносвязная нейронная сеть) </a>
+            <a class="dropdown-item nav-link" v-on:click="reloadNN(cy, 0)">
+              ANN (Полносвязная нейронная сеть)
+            </a>
           </li>
 
           <li>
-            <a class="dropdown-item nav-link"> CNN (Сверточная нейронная сеть) </a>
+            <a class="dropdown-item nav-link" v-on:click="reloadNN(cy, 1)">
+              CNN (Сверточная нейронная сеть)
+            </a>
           </li>
 
           <li>
-            <a class="dropdown-item nav-link"> GAN (Генеративная нейронная сеть) </a>
+            <a class="dropdown-item nav-link" v-on:click="reloadNN(cy, 2)">
+              GAN (Генеративная нейронная сеть)
+            </a>
           </li>
         </ul>
       </li>
@@ -83,34 +89,78 @@
 <script setup>
 import cytoscape from 'cytoscape'
 import { onMounted } from 'vue'
+import { setGraphElements } from './api'
+
+let cy
+// Выбранный номер нейронной сети.
+let nnChoice = 0
+
+function reloadNN(cy, nnChoice) {
+  cy.elements().remove()
+  setGraphElements(cy, nnChoice)
+}
 
 onMounted(() => {
-  var cy = cytoscape({
+  cy = cytoscape({
     container: document.getElementById('cy'), // container to render in
-
-    elements: [
-      // list of graph elements to start with
-      {
-        // node a
-        data: { id: 'a' }
-      },
-      {
-        // node b
-        data: { id: 'b' }
-      },
-      {
-        // edge ab
-        data: { id: 'ab', source: 'a', target: 'b' }
-      }
-    ],
-
     style: [
       // the stylesheet for the graph
       {
         selector: 'node',
         style: {
           'background-color': '#666',
-          label: 'data(id)'
+          content: 'data(value)',
+          shape: 'data(shape)',
+          'text-valign': 'center',
+          'text-halign': 'center',
+          'text-wrap': 'wrap'
+        }
+      },
+
+      {
+        selector: '.data',
+        style: {
+          shape: 'rectangle',
+          'background-color': 'white',
+          'border-color': '#666',
+          'border-width': '2'
+        }
+      },
+
+      {
+        selector: '.dataImage',
+        style: {
+          shape: 'rectangle',
+          'text-valign': 'top',
+          'border-color': '#666',
+          'border-width': '3'
+        }
+      },
+
+      {
+        selector: '.linear',
+        style: {
+          shape: 'round-rectangle',
+          color: 'white',
+          'border-width': '2'
+        }
+      },
+
+      {
+        selector: '.activation',
+        style: {
+          shape: 'cut-rectangle',
+          color: 'white',
+          'border-width': '2'
+        }
+      },
+
+      {
+        selector: '.convolution',
+        style: {
+          'text-valign': 'top',
+          shape: 'cut-rectangle',
+          'border-width': '2'
         }
       },
 
@@ -118,19 +168,37 @@ onMounted(() => {
         selector: 'edge',
         style: {
           width: 3,
-          'line-color': '#ccc',
-          'target-arrow-color': '#ccc',
-          'target-arrow-shape': 'triangle',
-          'curve-style': 'bezier'
+          'text-outline-width': '1',
+          'text-outline-color': 'white',
+          'text-outline-opacity': '1'
+        }
+      },
+      {
+        selector: '.edisplayweights',
+        style: {
+          content: 'data(value)',
+          'line-color': 'red',
+          'line-opacity': 0.5,
+          'z-index': 1
+        }
+      },
+      {
+        selector: '.ehasweights',
+        style: {
+          'line-color': 'black',
+          opacity: '0.1'
+        }
+      },
+      {
+        selector: '.enothasweights',
+        style: {
+          'line-color': '#ccc'
         }
       }
-    ],
-
-    layout: {
-      name: 'grid',
-      rows: 1
-    }
+    ]
   })
+
+  reloadNN(cy, nnChoice)
 })
 </script>
 
