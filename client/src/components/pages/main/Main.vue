@@ -34,19 +34,19 @@
         </button>
         <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
           <li>
-            <a class="dropdown-item nav-link" v-on:click="reloadNN(cy, 0)">
+            <a class="dropdown-item nav-link" v-on:click="reloadNN(cy, 'ann')">
               ANN (Полносвязная нейронная сеть)
             </a>
           </li>
 
           <li>
-            <a class="dropdown-item nav-link" v-on:click="reloadNN(cy, 1)">
+            <a class="dropdown-item nav-link" v-on:click="reloadNN(cy, 'cnn')">
               CNN (Сверточная нейронная сеть)
             </a>
           </li>
 
           <li>
-            <a class="dropdown-item nav-link" v-on:click="reloadNN(cy, 2)">
+            <a class="dropdown-item nav-link" v-on:click="reloadNN(cy, 'gan')">
               GAN (Генеративная нейронная сеть)
             </a>
           </li>
@@ -95,8 +95,12 @@
         </button>
       </div>
       <div class="col-sm mx-auto">
-        <button class="btn btn-dark"><i class="bi bi-arrow-left text-light"></i></button>
-        <button class="btn btn-dark"><i class="bi bi-arrow-right text-light"></i></button>
+        <button class="btn btn-dark">
+          <i class="bi bi-arrow-left text-light"></i>
+        </button>
+        <button class="btn btn-dark" v-on:click="nnForward(cy, nnChoice)">
+          <i class="bi bi-arrow-right text-light"></i>
+        </button>
       </div>
       <div class="col-sm">
         <button class="btn btn-dark float-end">
@@ -110,14 +114,15 @@
 <script setup>
 import cytoscape from 'cytoscape'
 import { onMounted } from 'vue'
-import { setGraphElements } from './api'
+import { setGraphElements, nnForward } from './api'
 
 let cy
 // Выбранный номер нейронной сети.
-let nnChoice = 0
+let nnChoice = 'ann'
 
-function reloadNN(cy, nnChoice) {
+function reloadNN(cy, newChoice) {
   cy.elements().remove()
+  nnChoice = newChoice
   setGraphElements(cy, nnChoice)
 }
 
@@ -195,15 +200,6 @@ onMounted(() => {
         }
       },
       {
-        selector: '.edisplayweights',
-        style: {
-          content: 'data(value)',
-          'line-color': 'red',
-          'line-opacity': 0.5,
-          'z-index': 1
-        }
-      },
-      {
         selector: '.ehasweights',
         style: {
           'line-color': 'black',
@@ -214,6 +210,23 @@ onMounted(() => {
         selector: '.enothasweights',
         style: {
           'line-color': '#ccc'
+        }
+      },
+      {
+        selector: '.highlight',
+        style: {
+          'line-color': 'green',
+          'border-color': 'green',
+          'border-width': '10px'
+        }
+      },
+      {
+        selector: '.edisplayweights',
+        style: {
+          content: 'data(value)',
+          'line-color': 'red',
+          'line-opacity': 0.5,
+          'z-index': 1
         }
       }
     ]
