@@ -1,17 +1,23 @@
 import torch
 
 
-def get_layers(model: torch.nn.Module):
-    children = list(model.children())
-    flatt_children = []
-    if children == []:
-        # Если у модели нет слоев, то она сама слой.
-        return [model]
+def create_batch(dataset, start_i, batch_size):
+    # Особый случай, батч вышел за пределы датасета.
+    if start_i + batch_size > len(dataset):
+        end_i = len(dataset)
+        x = [0] * (len(dataset) - start_i)
+        y = [0] * (len(dataset) - start_i)
     else:
-       # Итерируемся по слоям, ища вложенные.
-       for child in children:
-            flatt_children.extend(get_layers(child))
-    return flatt_children
+        end_i = start_i + batch_size
+        x = [0] * batch_size
+        y = [0] * batch_size
+
+    for i in range(start_i, end_i):
+        x[i - start_i] = dataset[i][0].unsqueeze(0)
+        y[i - start_i] = dataset[i][1].unsqueeze(0)
+    x = torch.cat(x, dim=0)
+    y = torch.cat(y, dim=0)
+    return (x, y)
 
 
 def graph_rep_add_data(count, weights):
@@ -48,7 +54,7 @@ def graph_rep_add_connection(weights, display_weights = True):
     return structure 
 
 
-def graph_rep_add_linear(layer: torch.nn.Linear, activation_type = "ReLU"):
+def graph_rep_add_linear(layer: torch.nn.Linear, activation_type = None):
     structure = []
 
     structure.append({
@@ -57,13 +63,14 @@ def graph_rep_add_linear(layer: torch.nn.Linear, activation_type = "ReLU"):
         "bias": layer.bias.tolist()
     })
 
-    structure.extend(graph_rep_add_connection([0] * layer.weight.shape[0], False))
+    if activation_type:
+        structure.extend(graph_rep_add_connection([0] * layer.weight.shape[0], False))
 
-    structure.append({
-        "type": "Activation",
-        "count": layer.weight.shape[0],
-        "activation": activation_type
-    })
+        structure.append({
+            "type": "Activation",
+            "count": layer.weight.shape[0],
+            "activation": activation_type
+        })
 
     return structure
 
