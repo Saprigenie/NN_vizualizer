@@ -48,15 +48,13 @@ function addData(cy, layer, layerNum, offset = 0, idPrefix = '', nodeSize = [50,
       data: {
         id: idPrefix + '_' + layerNum + '_' + nodeNum + 'N',
         type: 'Data',
-        value: layer.weights[nodeNum]
+        value: layer.weights[nodeNum],
+        width: nodeSize[0] + 'px',
+        height: nodeSize[1] + 'px'
       },
       position: {
         x: offset + nodeSize[0] / 2,
         y: (nodeSize[1] + spacing) * nodeNum + nodeSize[0] / 2 - centerCoeff // Центруем относительно начального угла обзора.
-      },
-      style: {
-        width: nodeSize[0] + 'px',
-        height: nodeSize[1] + 'px'
       },
       locked: true,
       classes: ['data']
@@ -85,7 +83,9 @@ function addDataImage(
       data: {
         id: idPrefix + '_' + layerNum + '_' + imageNum + 'N',
         type: 'DataImage',
-        value: 'Data'
+        value: 'Data',
+        width: elementSize[0] + 'px',
+        height: elementSize[1] + 'px'
       },
       position: {
         x: offset + elementSize[0] / 2,
@@ -95,12 +95,8 @@ function addDataImage(
           elementSize[1] / 2 -
           centerCoeff // Центруем относительно начального угла обзора.
       },
-      style: {
-        width: elementSize[0] + 'px',
-        height: elementSize[1] + 'px'
-      },
       locked: true,
-      classes: ['data', 'dataImage']
+      classes: ['dataImage']
     })
 
     for (let h = 0; h < layer.count[1]; h++) {
@@ -111,7 +107,9 @@ function addDataImage(
           data: {
             id: idPrefix + '_image_' + imageNum + '_' + layerNum + '_' + h + '_' + w + 'N',
             type: 'DataImage',
-            value: layer.weights[imageNum][h][w]
+            value: layer.weights[imageNum][h][w],
+            width: nodeSize[0] + 'px',
+            height: nodeSize[1] + 'px'
           },
           position: {
             x: offset + w * nodeSize[0] + nodeSize[0] / 2,
@@ -121,10 +119,6 @@ function addDataImage(
               h * nodeSize[1] + // offset по номеру пикселя в строке.
               nodeSize[1] / 2 -
               centerCoeff // Центруем относительно начального угла обзора.
-          },
-          style: {
-            width: nodeSize[0] + 'px',
-            height: nodeSize[1] + 'px'
           },
           locked: true,
           classes: ['data']
@@ -152,15 +146,13 @@ function addLinear(
       data: {
         id: idPrefix + '_' + layerNum + '_' + nodeNum + 'N',
         type: 'Linear',
-        value: 'Linear\nbias:' + Number.parseFloat(layer.bias[nodeNum]).toFixed(4)
+        value: 'Linear\nbias:' + Number.parseFloat(layer.bias[nodeNum]).toFixed(4),
+        width: nodeSize[0] + 'px',
+        height: nodeSize[1] + 'px'
       },
       position: {
         x: offset + nodeSize[0] / 2,
         y: (nodeSize[1] + spacing) * nodeNum + nodeSize[1] / 2 - centerCoeff // Центруем относительно начального угла обзора.
-      },
-      style: {
-        width: nodeSize[0] + 'px',
-        height: nodeSize[1] + 'px'
       },
       locked: true,
       classes: ['linear']
@@ -186,15 +178,13 @@ function addActivation(
       data: {
         id: idPrefix + '_' + layerNum + '_' + nodeNum + 'N',
         type: 'Activation',
-        value: 'Activation\ntype: ' + layer.activation
+        value: 'Activation\ntype: ' + layer.activation,
+        width: nodeSize[0] + 'px',
+        height: nodeSize[1] + 'px'
       },
       position: {
         x: offset + nodeSize[0] / 2,
         y: (nodeSize[1] + spacing) * nodeNum + nodeSize[1] / 2 - centerCoeff // Центруем относительно начального угла обзора.
-      },
-      style: {
-        width: nodeSize[0] + 'px',
-        height: nodeSize[1] + 'px'
       },
       locked: true,
       classes: ['activation']
@@ -225,7 +215,9 @@ function addConv2d(
         id: idPrefix + '_' + layerNum + '_' + convNum + 'N',
         type: 'Conv2d',
         constValues: constValues,
-        value: constValues + '\nbias: ' + Number.parseFloat(layer.bias[convNum]).toFixed(4)
+        value: constValues + '\nbias: ' + Number.parseFloat(layer.bias[convNum]).toFixed(4),
+        width: elementSize[0] + nodeSize[0] / 2 + 'px',
+        height: elementSize[1] + nodeSize[1] / 2 + 'px'
       },
       position: {
         x: offset + elementSize[0] / 2,
@@ -234,10 +226,6 @@ function addConv2d(
           convNum * spacing +
           elementSize[1] / 2 -
           centerCoeff // Центруем относительно начального угла обзора.
-      },
-      style: {
-        width: elementSize[0] + nodeSize[0] / 2 + 'px',
-        height: elementSize[1] + nodeSize[1] / 2 + 'px'
       },
       locked: true,
       classes: ['convolution']
@@ -251,7 +239,9 @@ function addConv2d(
           data: {
             id: idPrefix + '_image_' + convNum + '_' + layerNum + '_' + h + '_' + w + 'N',
             type: 'DataImage',
-            value: Number.parseFloat(layer.weights[convNum][h][w]).toFixed(3)
+            value: Number.parseFloat(layer.weights[convNum][h][w]).toFixed(3),
+            width: nodeSize[0] + 'px',
+            height: nodeSize[1] + 'px'
           },
           position: {
             x: offset + w * nodeSize[0] + nodeSize[0] / 2,
@@ -261,10 +251,6 @@ function addConv2d(
               h * nodeSize[1] + // offset по номеру пикселя в строке.
               nodeSize[1] / 2 -
               centerCoeff // Центруем относительно начального угла обзора.
-          },
-          style: {
-            width: nodeSize[0] + 'px',
-            height: nodeSize[1] + 'px'
           },
           locked: true,
           classes: ['data']
@@ -299,15 +285,13 @@ function addMaxPool2d(
           '\npadding: ' +
           layer.padding +
           '\nstride: ' +
-          layer.stride
+          layer.stride,
+        width: nodeSize[0] + 'px',
+        height: nodeSize[1] + 'px'
       },
       position: {
         x: offset + nodeSize[0] / 2,
         y: (nodeSize[1] + spacing) * nodeNum + nodeSize[1] / 2 - centerCoeff // Центруем относительно начального угла обзора.
-      },
-      style: {
-        width: nodeSize[0] + 'px',
-        height: nodeSize[1] + 'px'
       },
       locked: true,
       classes: ['activation']
@@ -323,15 +307,13 @@ function addMergeFlatten(cy, layer, layerNum, offset = 0, idPrefix = '', nodeSiz
     data: {
       id: idPrefix + '_' + layerNum + '_' + 0 + 'N',
       type: 'MergeFlatten',
-      value: 'Merge Flatten'
+      value: 'Merge Flatten',
+      width: nodeSize[0] + 'px',
+      height: nodeSize[1] + 'px'
     },
     position: {
       x: offset + nodeSize[0] / 2,
       y: nodeSize[1] + nodeSize[1] / 2
-    },
-    style: {
-      width: nodeSize[0] + 'px',
-      height: nodeSize[1] + 'px'
     },
     locked: true,
     classes: ['activation']

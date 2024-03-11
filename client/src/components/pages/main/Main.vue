@@ -67,15 +67,23 @@
         </button>
         <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton2">
           <li>
-            <a class="dropdown-item nav-link" v-on:click=""> 1 </a>
+            <a class="dropdown-item nav-link" v-on:click="changeBatchSize(nnNameChoice, 1)"> 1 </a>
           </li>
-
           <li>
-            <a class="dropdown-item nav-link" v-on:click=""> 2 </a>
+            <a class="dropdown-item nav-link" v-on:click="changeBatchSize(nnNameChoice, 2)"> 2 </a>
           </li>
-
           <li>
-            <a class="dropdown-item nav-link" v-on:click=""> 5 </a>
+            <a class="dropdown-item nav-link" v-on:click="changeBatchSize(nnNameChoice, 5)"> 5 </a>
+          </li>
+          <li>
+            <a class="dropdown-item nav-link" v-on:click="changeBatchSize(nnNameChoice, 10)">
+              10
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item nav-link" v-on:click="changeBatchSize(nnNameChoice, 64)">
+              64
+            </a>
           </li>
         </ul>
       </li>
@@ -98,12 +106,12 @@
         <button class="btn btn-dark">
           <i class="bi bi-arrow-left text-light"></i>
         </button>
-        <button class="btn btn-dark" v-on:click="nnForward(cy, nnChoice)">
+        <button class="btn btn-dark" v-on:click="nnForward(cy, nnNameChoice)">
           <i class="bi bi-arrow-right text-light"></i>
         </button>
       </div>
       <div class="col-sm">
-        <button class="btn btn-dark float-end">
+        <button class="btn btn-dark float-end" v-on:click="nnRestart(cy, nnNameChoice)">
           <i class="bi bi-arrow-clockwise"></i>
         </button>
       </div>
@@ -114,16 +122,16 @@
 <script setup>
 import cytoscape from 'cytoscape'
 import { onMounted } from 'vue'
-import { setGraphElements, nnForward } from './api'
+import { setGraphElements, nnForward, changeBatchSize, nnRestart } from './api'
 
 let cy
 // Выбранный номер нейронной сети.
-let nnChoice = 'ann'
+let nnNameChoice = 'ann'
 
 function reloadNN(cy, newChoice) {
   cy.elements().remove()
-  nnChoice = newChoice
-  setGraphElements(cy, nnChoice)
+  nnNameChoice = newChoice
+  setGraphElements(cy, nnNameChoice)
 }
 
 onMounted(() => {
@@ -136,7 +144,8 @@ onMounted(() => {
         style: {
           'background-color': '#666',
           content: 'data(value)',
-          shape: 'data(shape)',
+          width: 'data(width)',
+          height: 'data(height)',
           'text-valign': 'center',
           'text-halign': 'center',
           'text-wrap': 'wrap'
@@ -147,7 +156,17 @@ onMounted(() => {
         selector: '.data',
         style: {
           shape: 'rectangle',
-          'background-color': 'white',
+          'background-color': function (elem) {
+            // Меняем цвет данных в зависмости от данных.
+            if (elem.data('value') > 0) {
+              let value = Math.min(255, parseInt((255 * elem.data('value')) / 16))
+              return 'rgb(' + value + ',' + value + ',' + value + ')'
+            } else {
+              return 'black'
+            }
+          },
+          'text-outline-width': '1',
+          'text-outline-color': 'white',
           'border-color': '#666',
           'border-width': '2'
         }
@@ -232,7 +251,7 @@ onMounted(() => {
     ]
   })
 
-  reloadNN(cy, nnChoice)
+  reloadNN(cy, nnNameChoice)
 })
 </script>
 

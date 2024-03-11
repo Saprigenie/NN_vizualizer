@@ -27,6 +27,9 @@ class ANN(nn.Module):
         # Задаем оптимизатор:
         self.optimizer = torch.optim.SGD(self.parameters(), lr=.042)
 
+    def set_batch_size(self, batch_size):
+        self.batch_size = batch_size
+
     def forward(self, x):
         y = self.relu(self.lin_1(x))
         y = self.relu(self.lin_2(y))

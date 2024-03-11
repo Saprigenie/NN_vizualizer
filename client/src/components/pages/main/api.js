@@ -27,7 +27,6 @@ export async function nnForward(cy, nnName) {
   // С сервера приходят веса выбранной нейронной сети для отображения (forward или backward).
   if (!nnWeights[nnName] || nnWeights[nnName].ended) {
     nnWeights[nnName] = (await api.get('/nn/train/' + nnName)).data
-    console.log(nnWeights[nnName])
   }
   if (nnWeights[nnName].type == 'forward') {
     // Запоминаем некоторые поля для краткости записи.
@@ -64,6 +63,19 @@ export async function nnForward(cy, nnName) {
       nnWeights[nnName].ended = true
     }
   }
+}
+
+export async function changeBatchSize(nnName, batchSize) {
+  await api.post('/nn/batch_size/' + nnName + '/' + batchSize)
+}
+
+export async function nnRestart(cy, nnName) {
+  await api.post('/nn/restart/' + nnName)
+
+  // Пересоздаем граф.
+  cy.elements().remove()
+  nnWeights[nnName] = null
+  setGraphElements(cy, nnName)
 }
 
 function addGraphHandlers(cy) {

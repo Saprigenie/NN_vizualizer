@@ -298,6 +298,11 @@ class GAN:
 
         # Задаем функцию потерь:
         self.loss_function = nn.BCELoss()
+
+    def set_batch_size(self, batch_size):
+        self.batch_size = batch_size
+        self.generator.batch_size = batch_size
+        self.discriminator.batch_size = batch_size
     
     def train_generator_batch(self):
         ## Тренируем генератор

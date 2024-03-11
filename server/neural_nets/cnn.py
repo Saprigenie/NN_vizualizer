@@ -51,6 +51,9 @@ class CNN(nn.Module):
         # Задаем оптимизатор:
         self.optimizer = torch.optim.SGD(self.parameters(), lr=.042)
 
+    def set_batch_size(self, batch_size):
+        self.batch_size = batch_size
+
     def compute_size_after_conv(self, width_or_height):
         # Конкретно для архитектуры с 2-мя Conv2d и 2-мя MaxPool(2, 2).
         result = floor((width_or_height + 2*self.p - self.k_size) / self.s) + 1
