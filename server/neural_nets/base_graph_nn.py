@@ -1,11 +1,14 @@
 import torch.nn as nn
 
+from .utility.utility import create_batch
+
 
 class BaseGraphNN(nn.Module):
-    def __init__(self, in_features, out_features, batch_size):
+    def __init__(self, in_features, out_features, batch_size, name):
         super().__init__()
         self.in_features = in_features
         self.out_features = out_features
+        self.name = name
 
         # Слои нейронной сети, которая принимает in_features параметров и
         # выдает out_features параметров.
@@ -94,7 +97,23 @@ class BaseGraphNN(nn.Module):
         """
         forward_graph для целого батча.
         """
-        pass
+        x_batch, _ = create_batch(train_dataset, self.forward_i, self.batch_size)
+
+        # Обновляем индекс данных, которые будем брать в следующий раз.
+        self.forward_i += len(x_batch)
+        if self.forward_i >= len(train_dataset):
+            self.forward_i = 0
+
+        self.state_forward = False
+
+        return {
+            "model": self.name,
+            "type": "forward",
+            "dataIndex": 0,
+            "layerIndex": 0,
+            "ended": False,
+            "weights": [self.forward_graph(data) for data in x_batch]
+        }
 
     def backward_graph_batch(self):
         """

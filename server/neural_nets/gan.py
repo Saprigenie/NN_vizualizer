@@ -11,7 +11,8 @@ class GANgenerator(BaseGraphNN):
         super().__init__(
             in_features=in_features, 
             out_features = out_features, 
-            batch_size = batch_size
+            batch_size = batch_size,
+            name = "generator"
         )
 
         # ----- Структура сети -------
@@ -64,7 +65,7 @@ class GANgenerator(BaseGraphNN):
         structure.extend(graph_rep_add_data(self.out_features, [0] * self.out_features))
 
         return {
-            "model": "generator",
+            "model": self.name,
             "structure": structure
         }
     
@@ -111,7 +112,7 @@ class GANgenerator(BaseGraphNN):
             self.forward_i = 0
 
         return {
-            "model": "generator",
+            "model": self.name,
             "type": "forward",
             "dataIndex": 0,
             "layerIndex": 0,
@@ -141,7 +142,7 @@ class GANgenerator(BaseGraphNN):
         }]
 
         return {
-            "model": "generator",
+            "model": self.name,
             "type": "backward",
             "layerIndex": 0,
             "ended": False,
@@ -154,7 +155,8 @@ class GANdiscriminator(BaseGraphNN):
         super().__init__(
             in_features=in_features, 
             out_features = out_features, 
-            batch_size = batch_size
+            batch_size = batch_size,
+            name = "discriminator"
         )
 
         # ----- Структура сети -------
@@ -210,7 +212,7 @@ class GANdiscriminator(BaseGraphNN):
         structure.extend(graph_rep_add_data(layer.weight.shape[0], [0] * layer.weight.shape[0]))
 
         return {
-            "model": "discriminator",
+            "model": self.name,
             "structure": structure
         }
     
@@ -261,7 +263,7 @@ class GANdiscriminator(BaseGraphNN):
             self.forward_i = 0
 
         return {
-            "model": "discriminator",
+            "model": self.name,
             "type": "forward",
             "dataIndex": 0,
             "layerIndex": 0,
@@ -291,7 +293,7 @@ class GANdiscriminator(BaseGraphNN):
         }]
 
         return {
-            "model": "discriminator",
+            "model": self.name,
             "type": "backward",
             "layerIndex": 0,
             "ended": False,

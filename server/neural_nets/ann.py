@@ -12,7 +12,8 @@ class ANN(BaseGraphNN):
         super().__init__(
             in_features=in_features, 
             out_features = out_features, 
-            batch_size = batch_size
+            batch_size = batch_size,
+            name = "ann"
         )
 
         # ----- Структура сети -------
@@ -93,7 +94,7 @@ class ANN(BaseGraphNN):
         structure.extend(graph_rep_add_data(self.out_features, [0] * self.out_features))
 
         return [{
-            "model": "ann",
+            "model": self.name,
             "structure": structure
         }]
     
@@ -142,7 +143,7 @@ class ANN(BaseGraphNN):
         self.state_forward = False
 
         return {
-            "model": "ann",
+            "model": self.name,
             "type": "forward",
             "dataIndex": 0,
             "layerIndex": 0,
@@ -174,7 +175,7 @@ class ANN(BaseGraphNN):
         self.state_forward = True
 
         return {
-            "model": "ann",
+            "model": self.name,
             "type": "backward",
             "layerIndex": 0,
             "ended": False,
