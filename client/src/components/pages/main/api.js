@@ -66,11 +66,11 @@ export async function nnForward(cy, nnName) {
 }
 
 export async function changeBatchSize(nnName, batchSize) {
-  await api.post('/nn/batch_size/' + nnName + '/' + batchSize)
+  await api.put('/nn/batch_size/' + nnName + '/' + batchSize)
 }
 
 export async function nnRestart(cy, nnName) {
-  await api.post('/nn/restart/' + nnName)
+  await api.put('/nn/restart/' + nnName)
 
   // Пересоздаем граф.
   cy.elements().remove()

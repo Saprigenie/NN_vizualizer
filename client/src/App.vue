@@ -4,8 +4,8 @@
       <img
         src="./assets/logo.ico"
         alt="NN визуализатор обучения"
-        width="50"
-        height="50"
+        width="40"
+        height="40"
         class="ps-2 d-inline-block"
       />
     </router-link>

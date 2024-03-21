@@ -39,7 +39,7 @@ class NNTrain(Resource):
     
 @api.route('/restart/<nn_name>')
 class BatchSize(Resource):
-    def post(self, nn_name):
+    def put(self, nn_name):
         if not session.get(nn_name):
             abort(404)
         else:
@@ -64,7 +64,7 @@ class BatchSize(Resource):
 
 @api.route('/batch_size/<nn_name>/<batch_size>')
 class BatchSize(Resource):
-    def post(self, nn_name, batch_size):
+    def put(self, nn_name, batch_size):
         if not session.get(nn_name):
             abort(404)
         else:
