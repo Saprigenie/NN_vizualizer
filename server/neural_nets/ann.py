@@ -131,25 +131,6 @@ class ANN(BaseGraphNN):
         })
 
         return data_states
-    
-    def forward_graph_batch(self, train_dataset):
-        x_batch, _ = create_batch(train_dataset, self.forward_i, self.batch_size)
-
-        # Обновляем индекс данных, которые будем брать в следующий раз.
-        self.forward_i += len(x_batch)
-        if self.forward_i >= len(train_dataset):
-            self.forward_i = 0
-
-        self.state_forward = False
-
-        return {
-            "model": self.name,
-            "type": "forward",
-            "dataIndex": 0,
-            "layerIndex": 0,
-            "ended": False,
-            "weights": [self.forward_graph(data) for data in x_batch]
-        }
 
     def backward_graph_batch(self):
         weights_states = [{
