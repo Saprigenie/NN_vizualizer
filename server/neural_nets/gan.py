@@ -1,29 +1,34 @@
 import torch
 import torch.nn as nn
-from torch.nn import functional as F
 
-from .utility import create_batch, graph_rep_add_data, graph_rep_add_connection, graph_rep_add_linear
+from .base_graph_nn import BaseGraphNN
+from .utility.utility import create_batch
+from .utility.graph_structure import graph_rep_add_data, graph_rep_add_connection, graph_rep_add_linear
 
 
-class GANgenerator(nn.Module):
-    def __init__(self, in_features, out_features, batch_size = 1):
-        super().__init__()
-        self.in_features = in_features
-        self.out_features = out_features
-        self.batch_size = batch_size
-        self.forward_i = 0
+class GANgenerator(BaseGraphNN):
+    def __init__(self, in_features, out_features, batch_size = 1, optimizer = torch.optim.SGD, lr = 0.042):
+        super().__init__(
+            in_features=in_features, 
+            out_features = out_features, 
+            batch_size = batch_size
+        )
 
+        # ----- Структура сети -------
         self.lin_1 = nn.Linear(in_features, 16)
+        self.relu_1 = nn.ReLU()
         self.lin_2 = nn.Linear(16, 32)
+        self.relu_2 = nn.ReLU()
         self.lin_3 = nn.Linear(32, out_features)
-        self.relu = F.relu
+        # ----------------------------
 
-        # Задаем оптимизатор:
-        self.optimizer = torch.optim.SGD(self.parameters(), lr=.042)
+        self.set_optimizer(optimizer, lr)
 
     def forward(self, x):
-        y = self.relu(self.lin_1(x))
-        y = self.relu(self.lin_2(y))
+        y = self.lin_1(x)
+        y = self.relu_1(y)
+        y = self.lin_2(y)
+        y = self.relu_2(y)
         y = self.lin_3(y)
         return y
     
@@ -73,13 +78,15 @@ class GANgenerator(nn.Module):
             "w": data.squeeze(0).tolist()
         })
 
-        y = self.relu(self.lin_1(data))
+        y = self.lin_1(data)
+        y = self.relu_1(y)
         data_states.append({
             "graphLayerIndex": 6,
             "w": y.squeeze(0).tolist()
         })
 
-        y = self.relu(self.lin_2(y))
+        y = self.lin_2(y)
+        y = self.relu_2(y)
         data_states.append({
             "graphLayerIndex": 12,
             "w": y.squeeze(0).tolist()
@@ -142,26 +149,33 @@ class GANgenerator(nn.Module):
         }
 
 
-class GANdiscriminator(nn.Module):
-    def __init__(self, in_features, batch_size = 1):
-        super().__init__()
-        self.in_features = in_features
-        self.batch_size = batch_size
-        self.forward_i = 0
+class GANdiscriminator(BaseGraphNN):
+    def __init__(self, in_features, out_features = 1, batch_size = 1, optimizer = torch.optim.SGD, lr = 0.042):
+        super().__init__(
+            in_features=in_features, 
+            out_features = out_features, 
+            batch_size = batch_size
+        )
 
+        # ----- Структура сети -------
         self.lin_1 = nn.Linear(in_features, 32)
+        self.relu_1 = nn.ReLU()
         self.lin_2 = nn.Linear(32, 16)
-        self.lin_3 = nn.Linear(16, 1)
-        self.relu = F.relu
-        self.sigmoid = F.sigmoid
+        self.relu_2 = nn.ReLU()
+        self.lin_3 = nn.Linear(16, out_features)
+        self.sigmoid = nn.Sigmoid()
+        # ----------------------------
 
         # Задаем оптимизатор:
-        self.optimizer = torch.optim.SGD(self.parameters(), lr=.042)
+        self.set_optimizer(optimizer, lr)
 
     def forward(self, x):
-        y = self.relu(self.lin_1(x))
-        y = self.relu(self.lin_2(y))
-        y = self.sigmoid(self.lin_3(y))
+        y = self.lin_1(x)
+        y = self.relu_1(y)
+        y = self.lin_2(y)
+        y = self.relu_2(y)
+        y = self.lin_3(y)
+        y = self.sigmoid(y)
         return y
     
     def graph_structure(self):
@@ -210,19 +224,22 @@ class GANdiscriminator(nn.Module):
             "w": data.squeeze(0).tolist()
         })
 
-        y = self.relu(self.lin_1(data))
+        y = self.lin_1(data)
+        y = self.relu_1(y)
         data_states.append({
             "graphLayerIndex": 6,
             "w": y.squeeze(0).tolist()
         })
 
-        y = self.relu(self.lin_2(y))
+        y = self.lin_2(y)
+        y = self.relu_2(y)
         data_states.append({
             "graphLayerIndex": 12,
             "w": y.squeeze(0).tolist()
         })
 
-        y = self.sigmoid(self.lin_3(y))
+        y = self.lin_3(y)
+        y = self.sigmoid(y)
         data_states.append({
             "graphLayerIndex": 18,
             "w": y.squeeze(0).tolist()
@@ -301,8 +318,8 @@ class GAN:
 
     def set_batch_size(self, batch_size):
         self.batch_size = batch_size
-        self.generator.batch_size = batch_size
-        self.discriminator.batch_size = batch_size
+        self.generator.set_batch_size(batch_size)
+        self.discriminator.set_batch_size(batch_size)
     
     def train_generator_batch(self):
         ## Тренируем генератор
@@ -359,10 +376,10 @@ class GAN:
         # Тренируем по очереди генератор и дискриминатор.
         if self.generator_training:
             self.train_generator_batch()
-            self.generator_training = False
         else:
             self.train_discriminator_batch(train_dataset)
-            self.generator_training = True
+
+        self.generator_training = not self.generator_training
 
     def graph_structure(self):
         return [

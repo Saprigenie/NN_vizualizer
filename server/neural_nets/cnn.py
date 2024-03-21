@@ -1,25 +1,25 @@
 import torch
 import torch.nn as nn
-from torch.nn import functional as F
 import numpy as np
 from math import floor
 
-from .utility import create_batch, graph_rep_add_data, graph_rep_add_connection, graph_rep_add_linear
-from .utility import graph_rep_add_image_data, graph_rep_add_conv2d, graph_rep_add_maxpool2d, graph_rep_add_flatten
+from .base_graph_nn import BaseGraphNN
+from .utility.utility import create_batch
+from .utility.graph_structure import graph_rep_add_data, graph_rep_add_connection, graph_rep_add_linear
+from .utility.graph_structure import graph_rep_add_image_data, graph_rep_add_conv2d, graph_rep_add_maxpool2d, graph_rep_add_flatten
 
 
-class CNN(nn.Module):
-    def __init__(self, channels = 1, w = 8, h = 8, out_features = 10,  num_filters = 4, dimensions = 1, batch_size = 1):
-        super().__init__()
+class CNN(BaseGraphNN):
+    def __init__(self, channels = 1, w = 8, h = 8, out_features = 10,  num_filters = 4, dimensions = 1, batch_size = 1, 
+                 loss_function = nn.CrossEntropyLoss, optimizer = torch.optim.SGD, lr = 0.042):
+        super().__init__(
+            in_features=channels * w * h, 
+            out_features = out_features, 
+            batch_size = batch_size
+        )
         self.channels = channels
         self.w = w
         self.h = h
-        self.out_features = out_features
-        self.dim = dimensions
-        self.batch_size = batch_size
-        self.train_i = 0
-        self.forward_i = 0
-        self.state_forward = True 
 
         # kernel_size, stride и padding для Conv2d слоев.
         self.num_filters = num_filters
@@ -27,32 +27,30 @@ class CNN(nn.Module):
         self.s = 1
         self.p = 0
 
+        # Вычисление размера извлеченных признаков после Conv и MaxPool2d.
+        self.w_after = self.compute_size_after_conv(self.w)
+        self.h_after = self.compute_size_after_conv(self.h)
+
+
+        # ----- Структура сети -------
         # CNN сверточные слои.
         self.conv_1 = nn.Conv2d(in_channels = channels,
                                 out_channels = channels*self.num_filters,
                                 kernel_size = self.k_size,
                                 stride = self.s,
                                 padding = self.p)
+        self.relu_1 = nn.ReLU()
         self.pool_1 = nn.MaxPool2d(2, 2)
-
-        # Вычисление размера извлеченных признаков после Conv и MaxPool2d.
-        self.w_after = self.compute_size_after_conv(self.w)
-        self.h_after = self.compute_size_after_conv(self.h)
 
         # Полносвязанная нейронная сеть (классификатор).
         self.lin_1 = nn.Linear(self.channels*self.num_filters * self.w_after * self.h_after, 16)
+        self.relu_2 = nn.ReLU()
         self.lin_2 = nn.Linear(16, out_features)
+        self.softmax_1 = nn.Softmax(dimensions)
+        # ----------------------------
 
-        self.relu = F.relu
-        self.softmax = F.softmax
-
-        # Задаем функцию потерь:
-        self.loss_function = nn.CrossEntropyLoss()
-        # Задаем оптимизатор:
-        self.optimizer = torch.optim.SGD(self.parameters(), lr=.042)
-
-    def set_batch_size(self, batch_size):
-        self.batch_size = batch_size
+        self.set_optimizer(optimizer, lr)
+        self.set_loss_function(loss_function)
 
     def compute_size_after_conv(self, width_or_height):
         # Конкретно для архитектуры с 2-мя Conv2d и 2-мя MaxPool(2, 2).
@@ -61,19 +59,21 @@ class CNN(nn.Module):
 
         return result
 
-
     def forward(self, x):
         # Так как изначально в датасете картинки преобразованы в одну линию, то нужно вернуть из обратно.
         x = x.reshape(-1, 1, self.w, self.h)
 
-        y = self.relu(self.conv_1(x))
+        y = self.conv_1(x)
+        y = self.relu_1(y)
         y = self.pool_1(y)
 
         # Получаем размерность (размер батча, (out_channels последнего conv2d) * self.w_after * self.h_after)
         y = y.view(-1, self.channels*self.num_filters * self.w_after * self.h_after)
-        y = self.relu(self.lin_1(y))
+
+        y = self.lin_1(y)
+        y = self.relu_2(y)
         y = self.lin_2(y)
-        y = self.softmax(y, dim=self.dim)
+        y = self.softmax_1(y)
         return y
     
     def train_batch(self, train_dataset):
@@ -164,7 +164,8 @@ class CNN(nn.Module):
             "w": data.squeeze(0).tolist()
         })
 
-        y = self.relu(self.conv_1(data))
+        y = self.conv_1(data)
+        y = self.relu_1(y)
         data_states.append({
             "graphLayerIndex": 6,
             "w": y.squeeze(0).tolist()
@@ -183,14 +184,15 @@ class CNN(nn.Module):
             "w": y.squeeze(0).tolist()
         })
 
-        y = self.relu(self.lin_1(y))
+        y = self.lin_1(y)
+        y = self.relu_2(y)
         data_states.append({
             "graphLayerIndex": 20,
             "w": y.squeeze(0).tolist()
         })
 
         y = self.lin_2(y)
-        y = self.softmax(y, dim=self.dim)
+        y = self.softmax_1(y)
         data_states.append({
             "graphLayerIndex": 26,
             "w": y.squeeze(0).tolist()

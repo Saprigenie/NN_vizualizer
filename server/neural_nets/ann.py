@@ -1,40 +1,42 @@
 import torch
 import torch.nn as nn
-from torch.nn import functional as F
 
-from .utility import create_batch, graph_rep_add_data, graph_rep_add_connection, graph_rep_add_linear
+from .base_graph_nn import BaseGraphNN
+from .utility.utility import create_batch
+from .utility.graph_structure import graph_rep_add_data, graph_rep_add_connection, graph_rep_add_linear
 
 
-class ANN(nn.Module):
-    def __init__(self, in_features = 64, out_features = 10, dimensions = 1, batch_size = 1):
-        super().__init__()
-        self.in_features = in_features
-        self.out_features = out_features
-        self.dim = dimensions
-        self.batch_size = batch_size
-        self.train_i = 0
-        self.forward_i = 0
-        self.state_forward = True 
+class ANN(BaseGraphNN):
+    def __init__(self, in_features = 64, out_features = 10, dimensions = 1, batch_size = 1, 
+                 loss_function = nn.CrossEntropyLoss, optimizer = torch.optim.SGD, lr = 0.042):
+        super().__init__(
+            in_features=in_features, 
+            out_features = out_features, 
+            batch_size = batch_size
+        )
 
+        # ----- Структура сети -------
         self.lin_1 = nn.Linear(in_features, 16)
+        self.relu_1 = nn.ReLU()
         self.lin_2 = nn.Linear(16, 16)
+        self.relu_2 = nn.ReLU()
         self.lin_3 = nn.Linear(16, out_features)
-        self.relu = F.relu
-        self.softmax = F.softmax
+        self.softmax = nn.Softmax(dimensions)
+        # ----------------------------
 
-        # Задаем функцию потерь:
-        self.loss_function = nn.CrossEntropyLoss()
-        # Задаем оптимизатор:
-        self.optimizer = torch.optim.SGD(self.parameters(), lr=.042)
+        self.set_optimizer(optimizer, lr)
+        self.set_loss_function(loss_function)
 
     def set_batch_size(self, batch_size):
         self.batch_size = batch_size
 
     def forward(self, x):
-        y = self.relu(self.lin_1(x))
-        y = self.relu(self.lin_2(y))
+        y = self.lin_1(x)
+        y = self.relu_1(y)
+        y = self.lin_2(y)
+        y = self.relu_2(y)
         y = self.lin_3(y)
-        y = self.softmax(y, dim=self.dim)
+        y = self.softmax(y)
         return y
     
     def train_batch(self, train_dataset):
@@ -106,20 +108,22 @@ class ANN(nn.Module):
             "w": data.squeeze(0).tolist()
         })
 
-        y = self.relu(self.lin_1(data))
+        y = self.lin_1(data)
+        y = self.relu_1(y)
         data_states.append({
             "graphLayerIndex": 6,
             "w": y.squeeze(0).tolist()
         })
 
-        y = self.relu(self.lin_2(y))
+        y = self.lin_2(y)
+        y = self.relu_2(y)
         data_states.append({
             "graphLayerIndex": 12,
             "w": y.squeeze(0).tolist()
         })
 
         y = self.lin_3(y)
-        y = self.softmax(y, dim=self.dim)
+        y = self.softmax(y)
         data_states.append({
             "graphLayerIndex": 18,
             "w": y.squeeze(0).tolist()
