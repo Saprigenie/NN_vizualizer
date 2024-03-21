@@ -34,19 +34,19 @@
         </button>
         <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
           <li>
-            <a class="dropdown-item nav-link" v-on:click="reloadNN(cy, 0)">
+            <a class="dropdown-item nav-link" v-on:click="reloadNN(cy, 'ann')">
               ANN (Полносвязная нейронная сеть)
             </a>
           </li>
 
           <li>
-            <a class="dropdown-item nav-link" v-on:click="reloadNN(cy, 1)">
+            <a class="dropdown-item nav-link" v-on:click="reloadNN(cy, 'cnn')">
               CNN (Сверточная нейронная сеть)
             </a>
           </li>
 
           <li>
-            <a class="dropdown-item nav-link" v-on:click="reloadNN(cy, 2)">
+            <a class="dropdown-item nav-link" v-on:click="reloadNN(cy, 'gan')">
               GAN (Генеративная нейронная сеть)
             </a>
           </li>
@@ -67,15 +67,23 @@
         </button>
         <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton2">
           <li>
-            <a class="dropdown-item nav-link" v-on:click=""> 1 </a>
+            <a class="dropdown-item nav-link" v-on:click="changeBatchSize(nnNameChoice, 1)"> 1 </a>
           </li>
-
           <li>
-            <a class="dropdown-item nav-link" v-on:click=""> 2 </a>
+            <a class="dropdown-item nav-link" v-on:click="changeBatchSize(nnNameChoice, 2)"> 2 </a>
           </li>
-
           <li>
-            <a class="dropdown-item nav-link" v-on:click=""> 5 </a>
+            <a class="dropdown-item nav-link" v-on:click="changeBatchSize(nnNameChoice, 5)"> 5 </a>
+          </li>
+          <li>
+            <a class="dropdown-item nav-link" v-on:click="changeBatchSize(nnNameChoice, 10)">
+              10
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item nav-link" v-on:click="changeBatchSize(nnNameChoice, 64)">
+              64
+            </a>
           </li>
         </ul>
       </li>
@@ -95,11 +103,15 @@
         </button>
       </div>
       <div class="col-sm mx-auto">
-        <button class="btn btn-dark"><i class="bi bi-arrow-left text-light"></i></button>
-        <button class="btn btn-dark"><i class="bi bi-arrow-right text-light"></i></button>
+        <button class="btn btn-dark">
+          <i class="bi bi-arrow-left text-light"></i>
+        </button>
+        <button class="btn btn-dark" v-on:click="nnForward(cy, nnNameChoice)">
+          <i class="bi bi-arrow-right text-light"></i>
+        </button>
       </div>
       <div class="col-sm">
-        <button class="btn btn-dark float-end">
+        <button class="btn btn-dark float-end" v-on:click="nnRestart(cy, nnNameChoice)">
           <i class="bi bi-arrow-clockwise"></i>
         </button>
       </div>
@@ -110,15 +122,16 @@
 <script setup>
 import cytoscape from 'cytoscape'
 import { onMounted } from 'vue'
-import { setGraphElements } from './api'
+import { setGraphElements, nnForward, changeBatchSize, nnRestart } from './api'
 
 let cy
 // Выбранный номер нейронной сети.
-let nnChoice = 0
+let nnNameChoice = 'ann'
 
-function reloadNN(cy, nnChoice) {
+function reloadNN(cy, newChoice) {
   cy.elements().remove()
-  setGraphElements(cy, nnChoice)
+  nnNameChoice = newChoice
+  setGraphElements(cy, nnNameChoice)
 }
 
 onMounted(() => {
@@ -131,7 +144,8 @@ onMounted(() => {
         style: {
           'background-color': '#666',
           content: 'data(value)',
-          shape: 'data(shape)',
+          width: 'data(width)',
+          height: 'data(height)',
           'text-valign': 'center',
           'text-halign': 'center',
           'text-wrap': 'wrap'
@@ -142,7 +156,17 @@ onMounted(() => {
         selector: '.data',
         style: {
           shape: 'rectangle',
-          'background-color': 'white',
+          'background-color': function (elem) {
+            // Меняем цвет данных в зависмости от данных.
+            if (elem.data('value') > 0) {
+              let value = Math.min(255, parseInt((255 * elem.data('value')) / 16))
+              return 'rgb(' + value + ',' + value + ',' + value + ')'
+            } else {
+              return 'black'
+            }
+          },
+          'text-outline-width': '1',
+          'text-outline-color': 'white',
           'border-color': '#666',
           'border-width': '2'
         }
@@ -195,15 +219,6 @@ onMounted(() => {
         }
       },
       {
-        selector: '.edisplayweights',
-        style: {
-          content: 'data(value)',
-          'line-color': 'red',
-          'line-opacity': 0.5,
-          'z-index': 1
-        }
-      },
-      {
         selector: '.ehasweights',
         style: {
           'line-color': 'black',
@@ -215,11 +230,28 @@ onMounted(() => {
         style: {
           'line-color': '#ccc'
         }
+      },
+      {
+        selector: '.highlight',
+        style: {
+          'line-color': 'green',
+          'border-color': 'green',
+          'border-width': '10px'
+        }
+      },
+      {
+        selector: '.edisplayweights',
+        style: {
+          content: 'data(value)',
+          'line-color': 'red',
+          'line-opacity': 0.5,
+          'z-index': 1
+        }
       }
     ]
   })
 
-  reloadNN(cy, nnChoice)
+  reloadNN(cy, nnNameChoice)
 })
 </script>
 
