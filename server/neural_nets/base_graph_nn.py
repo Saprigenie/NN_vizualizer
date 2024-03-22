@@ -9,6 +9,7 @@ class BaseGraphNN(nn.Module):
         self.in_features = in_features
         self.out_features = out_features
         self.name = name
+        self.loss_value = 0
 
         # Слои нейронной сети, которая принимает in_features параметров и
         # выдает out_features параметров.
@@ -60,29 +61,33 @@ class BaseGraphNN(nn.Module):
         При изменении структуры здесь, необходимо переработать индексы в
         forward_graph и backward_graph
         Например:
-        [
-            {
-                "type": "Data",
-                "count": 64,
-                "weights": [...]
-            },
-            {
-                "type": "Connections",
-                "displayWeights": True
-                "weights": [[...], [...], ...]
-            },
-            {
-                "type": "Linear",
-                "count": 20,
-                "weights": [...]
-            },
-            {
-                "type": "Activation",
-                "count": 20,
-                "activation": "ReLU" 
-            },
-            ...
-        ]
+        {
+            "model": self.name,
+            "loss": self.loss_value,
+            "structure": [
+                {
+                    "type": "Data",
+                    "count": 64,
+                    "weights": [...]
+                },
+                {
+                    "type": "Connections",
+                    "displayWeights": True
+                    "weights": [[...], [...], ...]
+                },
+                {
+                    "type": "Linear",
+                    "count": 20,
+                    "weights": [...]
+                },
+                {
+                    "type": "Activation",
+                    "count": 20,
+                    "activation": "ReLU" 
+                },
+                ...
+            ]
+        }
         """
         pass
 
@@ -108,6 +113,7 @@ class BaseGraphNN(nn.Module):
 
         return {
             "model": self.name,
+            "loss": self.loss_value,
             "type": "forward",
             "dataIndex": 0,
             "layerIndex": 0,

@@ -99,6 +99,9 @@ class CNN(BaseGraphNN):
         if self.train_i >= len(train_dataset):
             self.train_i = 0
 
+        # Обновляем текущий loss_value
+        self.loss_value = loss.detach().cpu().numpy().item()
+
     def graph_structure(self):
         structure = []
 
@@ -152,6 +155,7 @@ class CNN(BaseGraphNN):
 
         return [{
             "model": self.name,
+            "loss": self.loss_value,
             "structure": structure
         }]
     
@@ -223,6 +227,7 @@ class CNN(BaseGraphNN):
 
         return {
             "model": self.name,
+            "loss": self.loss_value,
             "type": "backward",
             "layerIndex": 0,
             "ended": False,

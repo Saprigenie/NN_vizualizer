@@ -66,6 +66,7 @@ class GANgenerator(BaseGraphNN):
 
         return {
             "model": self.name,
+            "loss": self.loss_value,
             "structure": structure
         }
     
@@ -113,6 +114,7 @@ class GANgenerator(BaseGraphNN):
 
         return {
             "model": self.name,
+            "loss": self.loss_value,
             "type": "forward",
             "dataIndex": 0,
             "layerIndex": 0,
@@ -143,6 +145,7 @@ class GANgenerator(BaseGraphNN):
 
         return {
             "model": self.name,
+            "loss": self.loss_value,
             "type": "backward",
             "layerIndex": 0,
             "ended": False,
@@ -213,6 +216,7 @@ class GANdiscriminator(BaseGraphNN):
 
         return {
             "model": self.name,
+            "loss": self.loss_value,
             "structure": structure
         }
     
@@ -264,6 +268,7 @@ class GANdiscriminator(BaseGraphNN):
 
         return {
             "model": self.name,
+            "loss": self.loss_value,
             "type": "forward",
             "dataIndex": 0,
             "layerIndex": 0,
@@ -294,6 +299,7 @@ class GANdiscriminator(BaseGraphNN):
 
         return {
             "model": self.name,
+            "loss": self.loss_value,
             "type": "backward",
             "layerIndex": 0,
             "ended": False,
@@ -344,6 +350,9 @@ class GAN:
         # Делаем шаг оптимизатора:
         self.generator.optimizer.step()
 
+        # Обновляем текущий loss_value
+        self.generator.loss_value = loss_g.detach().cpu().numpy().item()
+
     def train_discriminator_batch(self, train_dataset):
         x_batch, _ = create_batch(train_dataset, self.train_i, self.batch_size)
         # Создаем шум для генератора:
@@ -373,6 +382,9 @@ class GAN:
         self.train_i += len(x_batch)
         if self.train_i >= len(train_dataset):
             self.train_i = 0
+        
+        # Обновляем текущий loss_value
+        self.discriminator.loss_value = loss_d.detach().cpu().numpy().item()
 
     def train_batch(self, train_dataset):
         # Тренируем по очереди генератор и дискриминатор.
