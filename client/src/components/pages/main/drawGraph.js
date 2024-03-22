@@ -64,7 +64,7 @@ function addData(
         x: offset + nodeSize.x / 2,
         y: (nodeSize.y + spacing) * nodeNum + nodeSize.y / 2 - centerCoeff // Центруем относительно начального угла обзора.
       },
-      ['data']
+      ['data', 'textCenter', 'textContrast', 'border']
     )
   }
   // Возвращает offset для следующего слоя.
@@ -102,7 +102,7 @@ function addDataImage(
           blockSize.y / 2 -
           centerCoeff // Центруем относительно начального угла обзора.
       },
-      ['dataImage']
+      ['dataImage', 'textTop', 'textContrast', 'border']
     )
 
     for (let h = 0; h < rows; h++) {
@@ -122,7 +122,7 @@ function addDataImage(
               nodeSize.y / 2 -
               centerCoeff // Центруем относительно начального угла обзора.
           },
-          ['data']
+          ['data', 'textCenter', 'textContrast', 'border']
         )
       }
     }
@@ -152,7 +152,7 @@ function addLinear(
         x: offset + nodeSize.x / 2,
         y: (nodeSize.y + spacing) * nodeNum + nodeSize.y / 2 - centerCoeff // Центруем относительно начального угла обзора.
       },
-      ['linear']
+      ['linear', 'textCenter', 'textWhite', 'blackBorder']
     )
   }
   // Возвращает offset для следующего слоя.
@@ -180,7 +180,7 @@ function addActivation(
         x: offset + nodeSize.x / 2,
         y: (nodeSize.y + spacing) * nodeNum + nodeSize.y / 2 - centerCoeff // Центруем относительно начального угла обзора.
       },
-      ['activation']
+      ['activation', 'textCenter', 'textWhite', 'blackBorder']
     )
   }
   // Возвращает offset для следующего слоя.
@@ -223,7 +223,7 @@ function addConv2d(
           elementSize.y / 2 -
           centerCoeff // Центруем относительно начального угла обзора.
       },
-      ['convolution'],
+      ['convolution', 'textTop', 'textContrast', 'border'],
       constValues
     )
 
@@ -244,7 +244,7 @@ function addConv2d(
               nodeSize.y / 2 -
               centerCoeff // Центруем относительно начального угла обзора.
           },
-          ['data']
+          ['data', 'textCenter', 'textContrast', 'border']
         )
       }
     }
@@ -280,7 +280,7 @@ function addMaxPool2d(
         x: offset + nodeSize.x / 2,
         y: (nodeSize.y + spacing) * nodeNum + nodeSize.y / 2 - centerCoeff // Центруем относительно начального угла обзора.
       },
-      ['activation']
+      ['activation', 'textCenter', 'textWhite', 'blackBorder']
     )
   }
   // Возвращает offset для следующего слоя.
@@ -305,7 +305,7 @@ function addMergeFlatten(
       x: offset + nodeSize.x / 2,
       y: 0
     },
-    ['activation']
+    ['activation', 'textCenter', 'textWhite', 'blackBorder']
   )
 
   // Возвращает offset для следующего слоя.

@@ -123,6 +123,7 @@
 import cytoscape from 'cytoscape'
 import { onMounted } from 'vue'
 import { setGraphElements, nnForward, changeBatchSize, nnRestart } from './api'
+import { graphStyles } from './styleGraph'
 
 let cy
 // Выбранный номер нейронной сети.
@@ -137,122 +138,7 @@ function reloadNN(cy, newChoice) {
 onMounted(() => {
   cy = cytoscape({
     container: document.getElementById('cy'), // container to render in
-    style: [
-      // the stylesheet for the graph
-      {
-        selector: 'node',
-        style: {
-          'background-color': '#666',
-          content: 'data(value)',
-          width: function (elem) {
-            return elem.data('width') + 'px'
-          },
-          height: function (elem) {
-            return elem.data('height') + 'px'
-          },
-          'text-valign': 'center',
-          'text-halign': 'center',
-          'text-wrap': 'wrap'
-        }
-      },
-
-      {
-        selector: '.data',
-        style: {
-          shape: 'rectangle',
-          'background-color': function (elem) {
-            // Меняем цвет данных в зависмости от данных.
-            if (elem.data('value') > 0) {
-              let value = Math.min(255, parseInt((255 * elem.data('value')) / 16))
-              return 'rgb(' + value + ',' + value + ',' + value + ')'
-            } else {
-              return 'black'
-            }
-          },
-          'text-outline-width': '1',
-          'text-outline-color': 'white',
-          'border-color': '#666',
-          'border-width': '2'
-        }
-      },
-
-      {
-        selector: '.dataImage',
-        style: {
-          shape: 'rectangle',
-          'text-valign': 'top',
-          'border-color': '#666',
-          'border-width': '3'
-        }
-      },
-
-      {
-        selector: '.linear',
-        style: {
-          shape: 'round-rectangle',
-          color: 'white',
-          'border-width': '2'
-        }
-      },
-
-      {
-        selector: '.activation',
-        style: {
-          shape: 'cut-rectangle',
-          color: 'white',
-          'border-width': '2'
-        }
-      },
-
-      {
-        selector: '.convolution',
-        style: {
-          'text-valign': 'top',
-          shape: 'cut-rectangle',
-          'border-width': '2'
-        }
-      },
-
-      {
-        selector: 'edge',
-        style: {
-          width: 3,
-          'text-outline-width': '1',
-          'text-outline-color': 'white',
-          'text-outline-opacity': '1'
-        }
-      },
-      {
-        selector: '.ehasweights',
-        style: {
-          'line-color': 'black',
-          opacity: '0.1'
-        }
-      },
-      {
-        selector: '.enothasweights',
-        style: {
-          'line-color': '#ccc'
-        }
-      },
-      {
-        selector: '.highlight',
-        style: {
-          'line-color': 'green',
-          'border-color': 'green',
-          'border-width': '10px'
-        }
-      },
-      {
-        selector: '.edisplayweights',
-        style: {
-          content: 'data(value)',
-          'line-color': 'red',
-          'line-opacity': 0.5,
-          'z-index': 1
-        }
-      }
-    ]
+    style: graphStyles
   })
 
   reloadNN(cy, nnNameChoice)
