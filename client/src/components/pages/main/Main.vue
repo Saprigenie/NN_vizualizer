@@ -144,8 +144,12 @@ onMounted(() => {
         style: {
           'background-color': '#666',
           content: 'data(value)',
-          width: 'data(width)',
-          height: 'data(height)',
+          width: function (elem) {
+            return elem.data('width') + 'px'
+          },
+          height: function (elem) {
+            return elem.data('height') + 'px'
+          },
           'text-valign': 'center',
           'text-halign': 'center',
           'text-wrap': 'wrap'
