@@ -43,6 +43,46 @@ export function drawGraph(cy, graphData, offset = 0, idPrefix = '') {
   return offset
 }
 
+export function formElemId(type, params) {
+  switch (type) {
+    case 'Data':
+    case 'DataImage':
+    case 'Linear':
+    case 'Activation':
+    case 'Conv2d':
+    case 'MaxPool2d':
+    case 'MergeFlatten':
+      return params.idPrefix + '_' + params.layerNum + '_' + params.nodeNum + 'N'
+    case 'DataImageCell':
+    case 'Conv2dCell':
+      return (
+        params.idPrefix +
+        '_cell_' +
+        params.layerNum +
+        '_' +
+        params.nodeNum +
+        '_' +
+        params.h +
+        '_' +
+        params.w +
+        'N'
+      )
+    case 'Connection':
+      return (
+        params.idPrefix +
+        '_' +
+        params.connNum +
+        '_' +
+        params.sourceNum +
+        '_' +
+        params.targetNum +
+        'E'
+      )
+    case 'Model':
+      return params.idPrefix + '_model'
+  }
+}
+
 function addData(
   cy,
   layer,
@@ -56,9 +96,11 @@ function addData(
   for (let nodeNum = 0; nodeNum < layer.count; nodeNum++) {
     addNode(
       cy,
-      idPrefix + '_' + layerNum + '_' + nodeNum + 'N',
-      'Data',
-      layer.weights[nodeNum],
+      formElemId(layer.type, { idPrefix: idPrefix, layerNum: layerNum, nodeNum: nodeNum }),
+      layer.type,
+      {
+        weight: layer.weights[nodeNum]
+      },
       nodeSize,
       {
         x: offset + nodeSize.x / 2,
@@ -91,9 +133,9 @@ function addDataImage(
     // Добавляем 1 node - который в себе будет содержать данные изображения.
     addNode(
       cy,
-      idPrefix + '_' + layerNum + '_' + currBlock + 'N',
-      'DataImage',
-      'Data',
+      formElemId(layer.type, { idPrefix: idPrefix, layerNum: layerNum, nodeNum: currBlock }),
+      layer.type,
+      {},
       blockSize,
       {
         x: offset + blockSize.x / 2,
@@ -110,9 +152,17 @@ function addDataImage(
         // Добавляем сами данные.
         addNode(
           cy,
-          idPrefix + '_image_' + currBlock + '_' + layerNum + '_' + h + '_' + w + 'N',
-          'DataImage',
-          layer.weights[currBlock][h][w],
+          formElemId(layer.type + 'Cell', {
+            idPrefix: idPrefix,
+            layerNum: layerNum,
+            nodeNum: currBlock,
+            w: w,
+            h: h
+          }),
+          layer.type + 'Cell',
+          {
+            weight: layer.weights[currBlock][h][w]
+          },
           nodeSize,
           {
             x: offset + w * nodeSize.x + nodeSize.x / 2,
@@ -144,9 +194,11 @@ function addLinear(
   for (let nodeNum = 0; nodeNum < layer.count; nodeNum++) {
     addNode(
       cy,
-      idPrefix + '_' + layerNum + '_' + nodeNum + 'N',
-      'Linear',
-      'Linear\nbias:' + Number.parseFloat(layer.bias[nodeNum]).toFixed(4),
+      formElemId(layer.type, { idPrefix: idPrefix, layerNum: layerNum, nodeNum: nodeNum }),
+      layer.type,
+      {
+        bias: layer.bias[nodeNum]
+      },
       nodeSize,
       {
         x: offset + nodeSize.x / 2,
@@ -172,9 +224,11 @@ function addActivation(
   for (let nodeNum = 0; nodeNum < layer.count; nodeNum++) {
     addNode(
       cy,
-      idPrefix + '_' + layerNum + '_' + nodeNum + 'N',
-      'Activation',
-      'Activation\ntype: ' + layer.activation,
+      formElemId(layer.type, { idPrefix: idPrefix, layerNum: layerNum, nodeNum: nodeNum }),
+      layer.type,
+      {
+        actType: layer.activation
+      },
       nodeSize,
       {
         x: offset + nodeSize.x / 2,
@@ -206,12 +260,15 @@ function addConv2d(
   let elementSize = { x: rows * nodeSize.x, y: blockSize.y }
   for (let currBlock = 0; currBlock < blocksN; currBlock++) {
     // Добавляем 1 node - который в себе будет содержать данные всего Conv2d.
-    let constValues = 'Conv2d:' + '\npadding: ' + layer.padding + '\nstride: ' + layer.stride
     addNode(
       cy,
-      idPrefix + '_' + layerNum + '_' + currBlock + 'N',
-      'Conv2d',
-      constValues + '\nbias: ' + Number.parseFloat(layer.bias[currBlock]).toFixed(4),
+      formElemId(layer.type, { idPrefix: idPrefix, layerNum: layerNum, nodeNum: currBlock }),
+      layer.type,
+      {
+        padding: layer.padding,
+        stride: layer.stride,
+        bias: layer.bias[currBlock]
+      },
       {
         x: elementSize.x + nodeSize.x / 2,
         y: elementSize.y + nodeSize.y / 2
@@ -223,8 +280,7 @@ function addConv2d(
           elementSize.y / 2 -
           centerCoeff // Центруем относительно начального угла обзора.
       },
-      ['convolution', 'textTop', 'textContrast', 'border'],
-      constValues
+      ['convolution', 'textTop', 'textContrast', 'border']
     )
 
     for (let h = 0; h < rows; h++) {
@@ -232,9 +288,15 @@ function addConv2d(
         // Добавляем данные фильтра.
         addNode(
           cy,
-          idPrefix + '_image_' + currBlock + '_' + layerNum + '_' + h + '_' + w + 'N',
-          'DataImage',
-          Number.parseFloat(layer.weights[currBlock][h][w]).toFixed(3),
+          formElemId(layer.type + 'Cell', {
+            idPrefix: idPrefix,
+            layerNum: layerNum,
+            nodeNum: currBlock,
+            w: w,
+            h: h
+          }),
+          layer.type + 'Cell',
+          { weight: layer.weights[currBlock][h][w] },
           nodeSize,
           {
             x: offset + w * nodeSize.x + nodeSize.x / 2,
@@ -266,21 +328,19 @@ function addMaxPool2d(
   for (let nodeNum = 0; nodeNum < layer.count; nodeNum++) {
     addNode(
       cy,
-      idPrefix + '_' + layerNum + '_' + nodeNum + 'N',
-      'MaxPool2d',
-      'MaxPool2d' +
-        '\nkernel size: ' +
-        layer.kernelSize +
-        '\npadding: ' +
-        layer.padding +
-        '\nstride: ' +
-        layer.stride,
+      formElemId(layer.type, { idPrefix: idPrefix, layerNum: layerNum, nodeNum: nodeNum }),
+      layer.type,
+      {
+        kernelSize: layer.kernelSize,
+        padding: layer.padding,
+        stride: layer.stride
+      },
       nodeSize,
       {
         x: offset + nodeSize.x / 2,
         y: (nodeSize.y + spacing) * nodeNum + nodeSize.y / 2 - centerCoeff // Центруем относительно начального угла обзора.
       },
-      ['activation', 'textCenter', 'textWhite', 'blackBorder']
+      ['maxPool2d', 'textCenter', 'textWhite', 'blackBorder']
     )
   }
   // Возвращает offset для следующего слоя.
@@ -297,29 +357,28 @@ function addMergeFlatten(
 ) {
   addNode(
     cy,
-    idPrefix + '_' + layerNum + '_' + 0 + 'N',
-    'MergeFlatten',
-    'Merge Flatten',
+    formElemId(layer.type, { idPrefix: idPrefix, layerNum: layerNum, nodeNum: 0 }),
+    layer.type,
+    {},
     nodeSize,
     {
       x: offset + nodeSize.x / 2,
       y: 0
     },
-    ['activation', 'textCenter', 'textWhite', 'blackBorder']
+    ['mergeFlatten', 'textCenter', 'textWhite', 'blackBorder']
   )
 
   // Возвращает offset для следующего слоя.
   return offset + nodeSize.x + STANDART_GRAPH_GAP
 }
 
-function addNode(cy, id, type, value, size, pos, classes, constValues = '') {
+function addNode(cy, id, type, values, size, pos, classes) {
   cy.add({
     group: 'nodes',
     data: {
       id: id,
       type: type,
-      constValues: constValues,
-      value: value,
+      values: values,
       width: size.x,
       height: size.y
     },
@@ -349,17 +408,27 @@ function addConnection(cy, connection, connectionNum, idPrefix = '') {
       for (let sourceNum = 0; sourceNum < sources.length; sourceNum++) {
         addEdge(
           cy,
-          idPrefix + '_' + connectionNum + '_' + sourceNum + '_' + targNum + 'E',
+          formElemId(connection.type, {
+            idPrefix: idPrefix,
+            connNum: connectionNum,
+            sourceNum: sourceNum,
+            targetNum: targNum
+          }),
           sources[sourceNum].id(),
           targets[targNum].id(),
-          Number.parseFloat(connection.weights[targNum][sourceNum]).toFixed(4)
+          { weight: connection.weights[targNum][sourceNum] }
         )
       }
     } else {
       // Значит каждый узел предыдущего слоя связан с 1 узлом следующего слоя.
       addEdge(
         cy,
-        idPrefix + '_' + connectionNum + '_' + targNum + '_' + targNum + 'E',
+        formElemId(connection.type, {
+          idPrefix: idPrefix,
+          connNum: connectionNum,
+          sourceNum: targNum,
+          targetNum: targNum
+        }),
         sources[targNum].id(),
         targets[targNum].id()
       )
@@ -367,12 +436,13 @@ function addConnection(cy, connection, connectionNum, idPrefix = '') {
   }
 }
 
-function addEdge(cy, id, source, target, weight = NaN) {
+function addEdge(cy, id, source, target, values = {}) {
   let edgeParameters = {
     group: 'edges',
     data: {
       type: 'Connection',
       id: id,
+      values: values,
       source: source,
       target: target
     },
@@ -380,8 +450,7 @@ function addEdge(cy, id, source, target, weight = NaN) {
     classes: []
   }
 
-  if (!isNaN(weight)) {
-    edgeParameters.data.value = weight
+  if (Object.keys(edgeParameters.data.values).length !== 0) {
     edgeParameters.classes.push('ehasweights')
   } else {
     edgeParameters.classes.push('enothasweights')
@@ -391,26 +460,25 @@ function addEdge(cy, id, source, target, weight = NaN) {
   cy.add(edgeParameters)
 }
 
-function addNNframe(cy, name, lossValue, offsets, idPrefix) {
+function addNNframe(cy, name, lossValue, idPrefix) {
   // Находим первый добавленый элемент графа, чтобы вычислить отступ влево.
   let elem = cy.getElementById(idPrefix + '_' + 0 + '_' + 0 + 'N')
   let leftTop = [elem.position().x - elem.data('width') / 2, -offsets[1]]
-  let center = [offsets[0] + leftTop[0] / 2, 0]
+  let center = { x: offsets[0] + leftTop[0] / 2, y: 0 }
 
-  cy.add({
-    group: 'nodes',
-    data: {
-      id: idPrefix + '_model',
-      type: 'Model',
-      value: name + '\nloss: ' + lossValue,
-      width: offsets[0] / 2,
-      height: offsets[1] / 2
+  addNode(
+    cy,
+    formElemId('Model', { idPrefix: idPrefix }),
+    'Model',
+    { name: name, loss: lossValue },
+    {
+      x: 0,
+      y: 0
     },
-    position: {
-      x: center[0],
-      y: center[1]
+    {
+      x: center.x,
+      y: center.y
     },
-    locked: true,
-    classes: ['activation']
-  })
+    ['model', 'textTop', 'textContrast', 'border']
+  )
 }

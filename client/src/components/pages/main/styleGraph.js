@@ -60,12 +60,13 @@ export let graphStyles = [
   {
     selector: '.data',
     style: {
-      content: (elem) => elem.data('value'),
+      content: (elem) => Number.parseFloat(elem.data('values').weight).toFixed(3),
       shape: 'rectangle',
       'background-color': function (elem) {
+        let weight = elem.data('values').weight
         // Меняем цвет данных в зависмости от данных.
-        if (elem.data('value') > 0) {
-          let value = Math.min(255, parseInt((255 * elem.data('value')) / 16))
+        if (weight > 0) {
+          let value = Math.min(255, parseInt((255 * weight) / 16))
           return 'rgb(' + value + ',' + value + ',' + value + ')'
         } else {
           return 'black'
@@ -77,7 +78,7 @@ export let graphStyles = [
   {
     selector: '.dataImage',
     style: {
-      content: (elem) => elem.data('value'),
+      content: (elem) => 'Data',
       shape: 'rectangle'
     }
   },
@@ -85,7 +86,7 @@ export let graphStyles = [
   {
     selector: '.linear',
     style: {
-      content: (elem) => elem.data('value'),
+      content: (elem) => 'Linear\nbias:' + Number.parseFloat(elem.data('values').bias).toFixed(4),
       shape: 'round-rectangle'
     }
   },
@@ -93,7 +94,30 @@ export let graphStyles = [
   {
     selector: '.activation',
     style: {
-      content: (elem) => elem.data('value'),
+      content: (elem) => 'Activation\ntype: ' + elem.data('values').actType,
+      shape: 'cut-rectangle'
+    }
+  },
+
+  {
+    selector: '.maxPool2d',
+    style: {
+      content: (elem) =>
+        'MaxPool2d' +
+        '\nkernel size: ' +
+        elem.data('values').kernelSize +
+        '\npadding: ' +
+        elem.data('values').padding +
+        '\nstride: ' +
+        elem.data('values').stride,
+      shape: 'cut-rectangle'
+    }
+  },
+
+  {
+    selector: '.mergeFlatten',
+    style: {
+      content: (elem) => 'Merge Flatten',
       shape: 'cut-rectangle'
     }
   },
@@ -101,7 +125,14 @@ export let graphStyles = [
   {
     selector: '.convolution',
     style: {
-      content: (elem) => elem.data('value'),
+      content: (elem) =>
+        'Conv2d:' +
+        '\npadding: ' +
+        elem.data('values').padding +
+        '\nstride: ' +
+        elem.data('values').stride +
+        '\nbias: ' +
+        Number.parseFloat(elem.data('values').bias).toFixed(4),
       shape: 'cut-rectangle'
     }
   },
@@ -143,7 +174,7 @@ export let graphStyles = [
   {
     selector: '.edisplayweights',
     style: {
-      content: 'data(value)',
+      content: (elem) => Number.parseFloat(elem.data('values').weight).toFixed(6),
       'line-color': 'red',
       'line-opacity': 0.5,
       'z-index': 1

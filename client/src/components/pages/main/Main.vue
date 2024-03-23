@@ -22,6 +22,8 @@
         </ul>
       </li>
 
+      <div class="vr ms-2 me-2"></div>
+
       <li class="nav-item dropdown">
         <button
           class="nav-link dropdown-toggle"
@@ -52,8 +54,6 @@
           </li>
         </ul>
       </li>
-
-      <div class="vr ms-2 me-2"></div>
 
       <li class="nav-item dropdown">
         <button
@@ -87,6 +87,8 @@
           </li>
         </ul>
       </li>
+
+      <div class="vr ms-2 me-2"></div>
     </ul>
   </nav>
 
