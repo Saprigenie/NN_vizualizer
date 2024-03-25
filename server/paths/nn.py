@@ -62,8 +62,16 @@ class BatchSize(Resource):
         return 'Ok'
     
 
-@api.route('/batch_size/<nn_name>/<batch_size>')
+@api.route('/batch_size/<nn_name>')
 class BatchSize(Resource):
+    def get(self, nn_name):
+        if not session.get(nn_name):
+            abort(404)
+        else:
+            model = session.get(nn_name) 
+
+        return model.batch_size
+    
     def put(self, nn_name, batch_size):
         if not session.get(nn_name):
             abort(404)

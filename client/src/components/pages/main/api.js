@@ -1,6 +1,6 @@
 import { api } from '@/api'
 import { drawGraph } from './drawGraph'
-import { updateWeights } from './updateWeights'
+import { updateWeights, updateLoss } from './updateWeights'
 
 // Запомненный прошлый нажатый узел.
 let prevTapNode = null
@@ -17,7 +17,14 @@ export async function setGraphElements(cy, nnName) {
   let offset = 0
 
   for (let i = 0; i < graphData.length; i++) {
-    offset = drawGraph(cy, graphData[i].structure, offset, graphData[i].model)
+    offset = drawGraph(
+      cy,
+      graphData[i].structure,
+      graphData[i].model,
+      graphData[i].loss,
+      offset,
+      graphData[i].model
+    )
   }
 
   addGraphHandlers(cy)
@@ -61,12 +68,17 @@ export async function nnForward(cy, nnName) {
     // Если все данные пройдены, то ставим флаг завершения.
     if (layerIndex >= nnWeights[nnName].weights.length) {
       nnWeights[nnName].ended = true
+      updateLoss(cy, nnWeights[nnName].loss, nnWeights[nnName].model)
     }
   }
 }
 
 export async function changeBatchSize(nnName, batchSize) {
   await api.put('/nn/batch_size/' + nnName + '/' + batchSize)
+}
+
+export async function getBatchSize(nnName, batchSize) {
+  return (await api.get('/nn/batch_size/' + nnName)).data
 }
 
 export async function nnRestart(cy, nnName) {

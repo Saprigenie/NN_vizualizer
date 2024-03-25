@@ -32,7 +32,7 @@
           data-bs-toggle="dropdown"
           aria-expanded="false"
         >
-          Выбор модели NN
+          Модель NN: {{ nnNameChoice.toUpperCase() }}
         </button>
         <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
           <li>
@@ -63,27 +63,23 @@
           data-bs-toggle="dropdown"
           aria-expanded="false"
         >
-          Выбор batch size
+          Batch size: {{ batchSize }}
         </button>
         <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton2">
           <li>
-            <a class="dropdown-item nav-link" v-on:click="changeBatchSize(nnNameChoice, 1)"> 1 </a>
+            <a class="dropdown-item nav-link" v-on:click="setBatchSize(1)"> 1 </a>
           </li>
           <li>
-            <a class="dropdown-item nav-link" v-on:click="changeBatchSize(nnNameChoice, 2)"> 2 </a>
+            <a class="dropdown-item nav-link" v-on:click="setBatchSize(2)"> 2 </a>
           </li>
           <li>
-            <a class="dropdown-item nav-link" v-on:click="changeBatchSize(nnNameChoice, 5)"> 5 </a>
+            <a class="dropdown-item nav-link" v-on:click="setBatchSize(5)"> 5 </a>
           </li>
           <li>
-            <a class="dropdown-item nav-link" v-on:click="changeBatchSize(nnNameChoice, 10)">
-              10
-            </a>
+            <a class="dropdown-item nav-link" v-on:click="setBatchSize(10)"> 10 </a>
           </li>
           <li>
-            <a class="dropdown-item nav-link" v-on:click="changeBatchSize(nnNameChoice, 64)">
-              64
-            </a>
+            <a class="dropdown-item nav-link" v-on:click="setBatchSize(64)"> 64 </a>
           </li>
         </ul>
       </li>
@@ -123,19 +119,14 @@
 
 <script setup>
 import cytoscape from 'cytoscape'
-import { onMounted } from 'vue'
-import { setGraphElements, nnForward, changeBatchSize, nnRestart } from './api'
+import { onMounted, ref } from 'vue'
+import { setGraphElements, nnForward, changeBatchSize, getBatchSize, nnRestart } from './api'
 import { graphStyles } from './styleGraph'
 
 let cy
 // Выбранный номер нейронной сети.
-let nnNameChoice = 'ann'
-
-function reloadNN(cy, newChoice) {
-  cy.elements().remove()
-  nnNameChoice = newChoice
-  setGraphElements(cy, nnNameChoice)
-}
+let nnNameChoice = ref('ann')
+let batchSize = ref(2)
 
 onMounted(() => {
   cy = cytoscape({
@@ -143,8 +134,20 @@ onMounted(() => {
     style: graphStyles
   })
 
-  reloadNN(cy, nnNameChoice)
+  reloadNN(cy, nnNameChoice.value)
 })
+
+async function reloadNN(cy, newChoice) {
+  cy.elements().remove()
+  nnNameChoice.value = newChoice
+  setGraphElements(cy, nnNameChoice.value)
+  batchSize.value = await getBatchSize(nnNameChoice.value)
+}
+
+function setBatchSize(newBatchSize) {
+  batchSize.value = newBatchSize
+  changeBatchSize(nnNameChoice, batchSize.value)
+}
 </script>
 
 <style scoped>

@@ -64,9 +64,10 @@ export let graphStyles = [
       shape: 'rectangle',
       'background-color': function (elem) {
         let weight = elem.data('values').weight
+        let maxWeight = elem.data('values').maxWeight
         // Меняем цвет данных в зависмости от данных.
-        if (weight > 0) {
-          let value = Math.min(255, parseInt((255 * weight) / 16))
+        if (maxWeight > 0 && weight > 0) {
+          let value = Math.min(255, parseInt((255 * weight) / maxWeight))
           return 'rgb(' + value + ',' + value + ',' + value + ')'
         } else {
           return 'black'
@@ -134,6 +135,21 @@ export let graphStyles = [
         '\nbias: ' +
         Number.parseFloat(elem.data('values').bias).toFixed(4),
       shape: 'cut-rectangle'
+    }
+  },
+
+  {
+    selector: '.model',
+    style: {
+      content: (elem) =>
+        elem.data('values').name +
+        '\nloss: ' +
+        Number.parseFloat(elem.data('values').loss).toFixed(4),
+      shape: 'cut-rectangle',
+      'font-size': '50px',
+      'background-opacity': 0,
+      'z-index': -1,
+      events: 'no'
     }
   },
 

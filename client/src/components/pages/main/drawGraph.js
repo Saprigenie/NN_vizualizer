@@ -1,6 +1,7 @@
 import { STANDART_GRAPH_GAP } from '@/constants'
+import { getMax } from '@/api/utility'
 
-export function drawGraph(cy, graphData, offset = 0, idPrefix = '') {
+export function drawGraph(cy, graphData, name, loss, offset = 0, idPrefix = '') {
   // Добавляем сами узлы графа отображения нейронной сети.
   for (let layerNum = 0; layerNum < graphData.length; layerNum++) {
     let layer = graphData[layerNum]
@@ -31,16 +32,16 @@ export function drawGraph(cy, graphData, offset = 0, idPrefix = '') {
   // Добавляем связи.
   for (let layerNum = 0; layerNum < graphData.length; layerNum++) {
     let layer = graphData[layerNum]
-    if ((layer.type = 'Connection')) {
+    if (layer.type === 'Connection') {
       addConnection(cy, layer, layerNum, idPrefix)
     }
   }
 
   // Добавляем рамку с названием нейронной сети и loss-ом.
-  // addNNframe(cy, graphData.model, graphData.loss, [offset, maxOffsetY], idPrefix)
+  addNNframe(cy, name, loss, idPrefix)
 
   // Возвращаем занятое нейронной сетью пространство.
-  return offset
+  return offset + STANDART_GRAPH_GAP
 }
 
 export function formElemId(type, params) {
@@ -92,6 +93,9 @@ function addData(
   nodeSize = { x: 50, y: 50 },
   spacing = 0
 ) {
+  // Для отображения более ярким цветом элекментов с большим значением веса в слое.
+  let maxWeight = getMax(layer.weights)
+
   let centerCoeff = (layer.count * nodeSize.y + spacing * (layer.count - 1)) / 2
   for (let nodeNum = 0; nodeNum < layer.count; nodeNum++) {
     addNode(
@@ -99,7 +103,8 @@ function addData(
       formElemId(layer.type, { idPrefix: idPrefix, layerNum: layerNum, nodeNum: nodeNum }),
       layer.type,
       {
-        weight: layer.weights[nodeNum]
+        weight: layer.weights[nodeNum],
+        maxWeight: maxWeight
       },
       nodeSize,
       {
@@ -122,6 +127,9 @@ function addDataImage(
   nodeSize = { x: 50, y: 50 },
   spacing = 50
 ) {
+  // Для отображения более ярким цветом элекментов с большим значением веса в слое.
+  let maxWeight = getMax(layer.weights)
+
   let blocksN = layer.count[0]
   let cols = layer.count[2]
   let rows = layer.count[1]
@@ -161,7 +169,8 @@ function addDataImage(
           }),
           layer.type + 'Cell',
           {
-            weight: layer.weights[currBlock][h][w]
+            weight: layer.weights[currBlock][h][w],
+            maxWeight: maxWeight
           },
           nodeSize,
           {
@@ -250,6 +259,9 @@ function addConv2d(
   nodeSize = { x: 50, y: 50 },
   spacing = 150
 ) {
+  // Для отображения более ярким цветом элекментов с большим значением веса в слое.
+  let maxWeight = getMax(layer.weights)
+
   let blocksN = layer.count[0]
   let cols = layer.count[2]
   let rows = layer.count[1]
@@ -296,7 +308,10 @@ function addConv2d(
             h: h
           }),
           layer.type + 'Cell',
-          { weight: layer.weights[currBlock][h][w] },
+          {
+            weight: layer.weights[currBlock][h][w],
+            maxWeight: maxWeight
+          },
           nodeSize,
           {
             x: offset + w * nodeSize.x + nodeSize.x / 2,
@@ -460,24 +475,36 @@ function addEdge(cy, id, source, target, values = {}) {
   cy.add(edgeParameters)
 }
 
-function addNNframe(cy, name, lossValue, idPrefix) {
-  // Находим первый добавленый элемент графа, чтобы вычислить отступ влево.
-  let elem = cy.getElementById(idPrefix + '_' + 0 + '_' + 0 + 'N')
-  let leftTop = [elem.position().x - elem.data('width') / 2, -offsets[1]]
-  let center = { x: offsets[0] + leftTop[0] / 2, y: 0 }
+function addNNframe(cy, name, loss, idPrefix) {
+  // Находим минимальные и максимальные значения x и y для отрисовки рамки нейронной сети.
+  let allNodes = cy.filter(function (element, i) {
+    let id = element.data('id')
+    return element.isNode() && id.startsWith(idPrefix + '_')
+  })
+  let minPoint = { x: allNodes[0].position().x, y: allNodes[0].position().y }
+  let maxPoint = { x: allNodes[0].position().x, y: allNodes[0].position().y }
+
+  for (let node of allNodes) {
+    let nodeHalfW = node.data('width') / 2
+    let nodeHalfH = node.data('height') / 2
+    minPoint.x = Math.min(minPoint.x, node.position().x - nodeHalfW)
+    minPoint.y = Math.min(minPoint.y, node.position().y - nodeHalfH)
+    maxPoint.x = Math.max(maxPoint.x, node.position().x + nodeHalfW)
+    maxPoint.y = Math.max(maxPoint.y, node.position().y + nodeHalfH)
+  }
 
   addNode(
     cy,
     formElemId('Model', { idPrefix: idPrefix }),
     'Model',
-    { name: name, loss: lossValue },
+    { name: name, loss: loss },
     {
-      x: 0,
-      y: 0
+      x: maxPoint.x - minPoint.x + STANDART_GRAPH_GAP,
+      y: maxPoint.y - minPoint.y + STANDART_GRAPH_GAP
     },
     {
-      x: center.x,
-      y: center.y
+      x: (maxPoint.x + minPoint.x) / 2,
+      y: (maxPoint.y + minPoint.y) / 2
     },
     ['model', 'textTop', 'textContrast', 'border']
   )

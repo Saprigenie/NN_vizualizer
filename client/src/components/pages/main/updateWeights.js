@@ -1,4 +1,5 @@
 import { formElemId } from './drawGraph'
+import { getMax } from '@/api/utility'
 
 // Запомненный прошлый слой, у которого изменялись веса.
 let prevHighlightedNodes = null
@@ -37,6 +38,13 @@ export function updateWeights(cy, graphLayerIndex, weights, idPrefix) {
   }
 }
 
+export function updateLoss(cy, loss, idPrefix) {
+  let nnFrameElem = cy.getElementById(formElemId('Model', { idPrefix: idPrefix }))
+  let values = nnFrameElem.data('values')
+  values.loss = loss
+  nnFrameElem.data('values', values)
+}
+
 function updateData(cy, type, graphLayerIndex, weights, idPrefix) {
   for (let i = 0; i < weights.length; i++) {
     let elem = cy.getElementById(
@@ -44,6 +52,7 @@ function updateData(cy, type, graphLayerIndex, weights, idPrefix) {
     )
     let values = elem.data('values')
     values.weight = weights[i]
+    values.maxWeight = getMax(weights)
     elem.data('values', values)
   }
 }
@@ -63,6 +72,7 @@ function updateDataImage(cy, type, graphLayerIndex, weights, idPrefix) {
         )
         let values = elem.data('values')
         values.weight = weights[imageNum][h][w]
+        values.maxWeight = getMax(weights)
         elem.data('values', values)
       }
     }
@@ -98,6 +108,7 @@ function updateConv2d(cy, type, graphLayerIndex, weightsBias, idPrefix) {
         )
         let values = elem.data('values')
         values.weight = weights[convNum][h][w]
+        values.maxWeight = getMax(weights)
         elem.data('values', values)
       }
     }
