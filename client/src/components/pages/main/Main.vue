@@ -13,15 +13,22 @@
         </button>
         <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
           <li>
-            <input id="setWeightInp" type="file" style="display: none" />
-            <button class="dropdown-item nav-link" v-on:click="showWeightsChooser()">
-              Сохранить веса модели
+            <button class="dropdown-item nav-link" v-on:click="downloadWeightsServer(nnNameChoice)">
+              Сохранить текущие веса модели
             </button>
           </li>
 
           <li>
-            <button class="dropdown-item nav-link" v-on:click="downloadWeightsServer(nnNameChoice)">
-              Загрузить веса модели
+            <input
+              id="setWeightInp"
+              type="file"
+              style="display: none"
+              v-on:change="
+                (ev) => uploadWeightsServer(cy, nnNameChoice, ev.target.files[0], toaster)
+              "
+            />
+            <button class="dropdown-item nav-link" v-on:click="showWeightsChooser()">
+              Загрузить новые веса модели
             </button>
           </li>
         </ul>
@@ -160,7 +167,7 @@
       <div class="col">
         <button
           class="btn btn-dark float-end"
-          v-on:click="nnRestartServer(cy, nnNameChoice)"
+          v-on:click="nnRestartServer(cy, nnNameChoice, toaster)"
           data-bs-toggle="tooltip"
           data-bs-placement="top"
           title="Полностью сбрасывает текущий процесс обучения нейронной сети."
@@ -176,15 +183,19 @@
 import cytoscape from 'cytoscape'
 import * as bootstrap from 'bootstrap'
 import { onMounted, reactive, ref } from 'vue'
+import { useToaster, ToastTypes } from '@/store/toaster'
 import {
   setGraphElements,
   nnForwardServer,
   setBatchSizeServer,
   getBatchSizeServer,
   nnRestartServer,
-  downloadWeightsServer
+  downloadWeightsServer,
+  uploadWeightsServer
 } from './api'
 import { graphStyles } from './styleGraph'
+
+const toaster = useToaster()
 
 let cy
 // Выбранный номер нейронной сети.
@@ -235,7 +246,7 @@ async function nnForward() {
 
 function setBatchSize(newBatchSize) {
   batchSize.value = newBatchSize
-  setBatchSizeServer(nnNameChoice.value, batchSize.value)
+  setBatchSizeServer(nnNameChoice.value, batchSize.value, toaster)
 }
 </script>
 

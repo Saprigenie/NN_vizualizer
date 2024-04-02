@@ -1,6 +1,9 @@
-import { api } from '@/api'
+import { saveAs } from 'file-saver'
+
+import { api, baseURL } from '@/api'
 import { drawGraph } from './drawGraph'
 import { updateWeights, updateLoss } from './updateWeights'
+import { ToastTypes } from '@/store/toaster'
 
 // Запомненный прошлый нажатый узел.
 let prevTapNode = null
@@ -84,16 +87,30 @@ export async function nnForwardServer(cy, nnName) {
   return nnWeights[nnName].trainStep
 }
 
-export async function setBatchSizeServer(nnName, batchSize) {
-  await api.put('/nn/batch_size/' + nnName + '/' + batchSize)
+export async function setBatchSizeServer(nnName, batchSize, toaster) {
+  await api.put('/nn/batch_size/' + nnName + '/' + batchSize).then((res) => {
+    // Добавляем сообщение пользователю.
+    toaster.addToast({
+      title: 'Информация',
+      body: 'Размер батча успешно обновлен.',
+      type: ToastTypes.success
+    })
+  })
 }
 
-export async function getBatchSizeServer(nnName, batchSize) {
+export async function getBatchSizeServer(nnName) {
   return (await api.get('/nn/batch_size/' + nnName)).data
 }
 
-export async function nnRestartServer(cy, nnName) {
-  await api.put('/nn/restart/' + nnName)
+export async function nnRestartServer(cy, nnName, toaster) {
+  await api.put('/nn/restart/' + nnName).then((res) => {
+    // Добавляем сообщение пользователю.
+    toaster.addToast({
+      title: 'Информация',
+      body: 'Модель ' + nnName + ' польностью обнулена.',
+      type: ToastTypes.success
+    })
+  })
 
   // Пересоздаем граф.
   cy.elements().remove()
@@ -102,7 +119,25 @@ export async function nnRestartServer(cy, nnName) {
 }
 
 export async function downloadWeightsServer(nnName) {
-  await api.get('/nn/weights/' + nnName)
+  saveAs(baseURL + '/nn/weights/' + nnName, nnName + '.pth')
+}
+
+export async function uploadWeightsServer(cy, nnName, file, toaster) {
+  let formData = new FormData()
+  formData.append('weights', { pupa: 'lupa' })
+  formData.append('weights', file)
+  await api.post('/nn/weights/' + nnName, formData).then((res) => {
+    // Добавляем сообщение пользователю.
+    toaster.addToast({
+      title: 'Информация',
+      body: 'Веса модели ' + nnName + ' успешно обновлены.',
+      type: ToastTypes.success
+    })
+  })
+
+  // Пересоздаем граф.
+  cy.elements().remove()
+  setGraphElements(cy, nnName)
 }
 
 function addGraphHandlers(cy) {

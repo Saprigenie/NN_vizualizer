@@ -102,7 +102,6 @@ class BaseGraphNN(nn.Module):
         """
         Формирует на каком мы наборе данных, на каком батче и на какой эпохе.
         """
-        print(self.batch_size, train_i)
         return { 
             "data": {"curr": 1, "max": self.batch_size},
             "batch": {"curr": (train_i // self.batch_size) + 1, "max": dataset_len // self.batch_size},

@@ -25,8 +25,12 @@
 
   <main>
     <router-view></router-view>
+    <ToasterComponent />
   </main>
 </template>
 
-<script setup></script>
+<script setup>
+import ToasterComponent from '@/components/utility/ToasterComponent.vue'
+</script>
+
 <style scoped></style>

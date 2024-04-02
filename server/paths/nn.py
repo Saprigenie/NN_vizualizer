@@ -1,5 +1,5 @@
 from flask_restx import Namespace, Resource
-from flask import abort, session, send_file
+from flask import abort, session, send_file, request
 import torch
 import io
 
@@ -97,12 +97,18 @@ class Weights(Resource):
         weights_buffer = io.BytesIO()
         torch.save(model.state_dict(), weights_buffer)
 
-        return send_file(io.BytesIO(weights_buffer.getbuffer()), download_name = model.name + ".pth")
+        return send_file(io.BytesIO(weights_buffer.getbuffer()), download_name = model.name + ".pth", as_attachment=True)
     
     def post(self, nn_name):
         if not session.get(nn_name):
             abort(404)
         else:
             model = session.get(nn_name) 
+
+        weights = request.files['weights']
+
+        # TO DO: Ловля ошибок, потенциально небезопасная штучка.
+        model.load_state_dict(torch.load(weights))
+        model.eval()
 
         return 'Ok'

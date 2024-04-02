@@ -13,7 +13,7 @@ remove_folder_content("flask_session")
 app = Flask(__name__)
 app.config.from_pyfile('config.py')
 Session(app)
-CORS(app, supports_credentials=True)
+CORS(app, supports_credentials=True, expose_headers=["Content-Disposition"])
 api.init_app(app)
 
 
