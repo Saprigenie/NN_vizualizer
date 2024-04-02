@@ -149,6 +149,7 @@ export let graphStyles = [
       'font-size': '50px',
       'background-opacity': 0,
       'z-index': -1,
+      'border-width': '4',
       events: 'no'
     }
   },

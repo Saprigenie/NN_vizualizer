@@ -102,27 +102,14 @@ class GANgenerator(BaseGraphNN):
 
         return data_states
     
-    def forward_graph_batch(self, train_dataset):
-        x_batch, _ = create_batch(train_dataset, self.forward_i, self.batch_size)
+    def forward_graph_batch(self, train_dataset, train_i):
+        x_batch, _ = create_batch(train_dataset, self.train_i, self.batch_size)
         # Подменяем данные на рандомный тензор, так как это стандартный вход для генератора.
         x_batch = torch.randn(len(x_batch), self.in_features)
 
-        # Обновляем индекс данных, которые будем брать в следующий раз.
-        self.forward_i += len(x_batch)
-        if self.forward_i == len(train_dataset):
-            self.forward_i = 0
+        return self.form_train_state("forward", [self.forward_graph(data) for data in x_batch], len(train_dataset), train_i)
 
-        return {
-            "model": self.name,
-            "loss": self.loss_value,
-            "type": "forward",
-            "dataIndex": 0,
-            "layerIndex": 0,
-            "ended": False,
-            "weights": [self.forward_graph(data) for data in x_batch]
-        }
-
-    def backward_graph_batch(self):
+    def backward_graph_batch(self, train_dataset, train_i):
         weights_states = [{
             "graphLayerIndex": 1,
             "w": self.lin_1.weight.tolist()
@@ -143,14 +130,7 @@ class GANgenerator(BaseGraphNN):
             "w": self.lin_3.bias.tolist()
         }]
 
-        return {
-            "model": self.name,
-            "loss": self.loss_value,
-            "type": "backward",
-            "layerIndex": 0,
-            "ended": False,
-            "weights": list(reversed(weights_states))
-        }
+        return self.form_train_state("backward", list(reversed(weights_states)), len(train_dataset), train_i)
 
 
 class GANdiscriminator(BaseGraphNN):
@@ -158,7 +138,7 @@ class GANdiscriminator(BaseGraphNN):
         super().__init__(
             in_features=in_features, 
             out_features = out_features, 
-            batch_size = batch_size,
+            batch_size = batch_size * 2, # Так как учится на двойном объеме данных (реальные/фейковые).
             name = "discriminator"
         )
 
@@ -173,6 +153,9 @@ class GANdiscriminator(BaseGraphNN):
 
         # Задаем оптимизатор:
         self.set_optimizer(optimizer, lr)
+
+    def set_batch_size(self, batch_size):
+        return super().set_batch_size(batch_size * 2) 
 
     def forward(self, x):
         y = self.lin_1(x)
@@ -253,30 +236,17 @@ class GANdiscriminator(BaseGraphNN):
 
         return data_states
     
-    def forward_graph_batch(self, train_dataset, generator):
-        x_batch, _ = create_batch(train_dataset, self.forward_i, self.batch_size)
-
-        x_noise = torch.randn(self.batch_size, generator.in_features)
+    def forward_graph_batch(self, train_dataset, generator, train_i):
+        # Половина батча - реальные данные, половина - фейковые.
+        x_batch, _ = create_batch(train_dataset, self.train_i, self.batch_size // 2)
+        x_noise = torch.randn(self.batch_size // 2, generator.in_features)
         x_gen_batch = generator(x_noise)
 
         x_batch = torch.cat((x_batch, x_gen_batch), dim=0)
 
-        # Обновляем индекс данных, которые будем брать в следующий раз.
-        self.forward_i += len(x_batch)
-        if self.forward_i >= len(train_dataset) * 2:
-            self.forward_i = 0
+        return self.form_train_state("forward", [self.forward_graph(data) for data in x_batch], len(train_dataset) * 2, train_i * 2)
 
-        return {
-            "model": self.name,
-            "loss": self.loss_value,
-            "type": "forward",
-            "dataIndex": 0,
-            "layerIndex": 0,
-            "ended": False,
-            "weights": [self.forward_graph(data) for data in x_batch]
-        }
-
-    def backward_graph_batch(self):
+    def backward_graph_batch(self, train_dataset, train_i):
         weights_states = [{
             "graphLayerIndex": 1,
             "w": self.lin_1.weight.tolist()
@@ -297,23 +267,19 @@ class GANdiscriminator(BaseGraphNN):
             "w": self.lin_3.bias.tolist()
         }]
 
-        return {
-            "model": self.name,
-            "loss": self.loss_value,
-            "type": "backward",
-            "layerIndex": 0,
-            "ended": False,
-            "weights": list(reversed(weights_states))
-        }
+        return self.form_train_state("backward", list(reversed(weights_states)), len(train_dataset) * 2, train_i * 2)
 
 
-class GAN:
+class GAN(BaseGraphNN):
     def __init__(self, in_vector_size = 100, img_size = 64, batch_size = 1):
-        super().__init__()
+        super().__init__(
+            in_vector_size,
+            1,
+            batch_size,
+            "GAN"
+        )
         self.in_vector_size = in_vector_size
-        self.batch_size = batch_size
-        self.train_i = 0
-        self.state_forward = True 
+        
         # Кто обучается сейчас.
         self.generator_training = True
 
@@ -382,6 +348,7 @@ class GAN:
         self.train_i += len(x_batch)
         if self.train_i >= len(train_dataset):
             self.train_i = 0
+            self.curr_epoch += 1
         
         # Обновляем текущий loss_value
         self.discriminator.loss_value = loss_d.detach().cpu().numpy().item()
@@ -406,16 +373,16 @@ class GAN:
 
         # Узнаем, у кого сейчас форвард по флагу.
         if self.generator_training:
-            return self.generator.forward_graph_batch(train_dataset)
+            return self.generator.forward_graph_batch(train_dataset, self.train_i)
         else:
-            return self.discriminator.forward_graph_batch(train_dataset, self.generator)
+            return self.discriminator.forward_graph_batch(train_dataset, self.generator, self.train_i)
 
-    def backward_graph_batch(self):
+    def backward_graph_batch(self, train_dataset):
         self.state_forward = True
 
         # Узнаем, у кого сейчас обратное распространение по инвертированному флагу.
         if not self.generator_training:
-            return self.generator.backward_graph_batch()
+            return self.generator.backward_graph_batch(train_dataset, self.train_i)
         else:
-            return self.discriminator.backward_graph_batch()
+            return self.discriminator.backward_graph_batch(train_dataset, self.train_i)
     

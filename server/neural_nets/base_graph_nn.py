@@ -15,11 +15,11 @@ class BaseGraphNN(nn.Module):
         # выдает out_features параметров.
         pass
 
-        # Также необходимо определить размер батча обучения нейронной сети и 
+        # Также необходимо определить размер батча обучения нейронной сети, на какой мы эпохе и 
         # на каком индексе в тренировочном датасете мы остановились
         # для удобства.
         self.batch_size = batch_size
-        self.forward_i = 0
+        self.curr_epoch = 1
         self.train_i = 0
 
         # Какое состояние нейросети для отправки весов на клиент (forward или backward)
@@ -98,28 +98,40 @@ class BaseGraphNN(nn.Module):
         """
         pass
 
+    def form_train_step(self, dataset_len, train_i):
+        """
+        Формирует на каком мы наборе данных, на каком батче и на какой эпохе.
+        """
+        print(self.batch_size, train_i)
+        return { 
+            "data": {"curr": 1, "max": self.batch_size},
+            "batch": {"curr": (train_i // self.batch_size) + 1, "max": dataset_len // self.batch_size},
+            "epoch": {"curr": self.curr_epoch},
+        }
+
+    def form_train_state(self, type, weights, dataset_len, train_i = None):
+        """
+        Возвращает стандартное сосотояние нейронной сети для отправки на клиент.
+        """
+        if (train_i is None): train_i = self.train_i
+        return {
+            "model": self.name,
+            "loss": self.loss_value,
+            "type": type,
+            "dataIndex": 0,
+            "layerIndex": 0,
+            "ended": False,
+            "weights": weights,
+            "trainStep": self.form_train_step(dataset_len, train_i)
+        }
+
     def forward_graph_batch(self, train_dataset):
         """
         forward_graph для целого батча.
         """
-        x_batch, _ = create_batch(train_dataset, self.forward_i, self.batch_size)
-
-        # Обновляем индекс данных, которые будем брать в следующий раз.
-        self.forward_i += len(x_batch)
-        if self.forward_i >= len(train_dataset):
-            self.forward_i = 0
-
+        x_batch, _ = create_batch(train_dataset, self.train_i, self.batch_size)
         self.state_forward = False
-
-        return {
-            "model": self.name,
-            "loss": self.loss_value,
-            "type": "forward",
-            "dataIndex": 0,
-            "layerIndex": 0,
-            "ended": False,
-            "weights": [self.forward_graph(data) for data in x_batch]
-        }
+        return self.form_train_state("forward", [self.forward_graph(data) for data in x_batch], len(train_dataset))
 
     def backward_graph_batch(self):
         """

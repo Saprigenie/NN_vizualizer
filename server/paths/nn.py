@@ -1,5 +1,7 @@
 from flask_restx import Namespace, Resource
-from flask import abort, session
+from flask import abort, session, send_file
+import torch
+import io
 
 from config import NN_NAMES
 from neural_nets.ann import ANN
@@ -32,7 +34,7 @@ class NNTrain(Resource):
             weights_update = model.forward_graph_batch(session.get("digits_dataset"))
         else:
             model.train_batch(session.get("digits_dataset"))
-            weights_update = model.backward_graph_batch()
+            weights_update = model.backward_graph_batch(session.get("digits_dataset"))
 
 
         return weights_update
@@ -62,9 +64,10 @@ class BatchSize(Resource):
         return 'Ok'
     
 
-@api.route('/batch_size/<nn_name>')
+@api.route('/batch_size/<nn_name>', defaults={'batch_size': 5})
+@api.route('/batch_size/<nn_name>/<batch_size>')
 class BatchSize(Resource):
-    def get(self, nn_name):
+    def get(self, nn_name, batch_size):
         if not session.get(nn_name):
             abort(404)
         else:
@@ -79,5 +82,27 @@ class BatchSize(Resource):
             model = session.get(nn_name) 
         
         model.set_batch_size(int(batch_size))
+
+        return 'Ok'
+    
+
+@api.route('/weights/<nn_name>')
+class Weights(Resource):
+    def get(self, nn_name):
+        if not session.get(nn_name):
+            abort(404)
+        else:
+            model = session.get(nn_name) 
+
+        weights_buffer = io.BytesIO()
+        torch.save(model.state_dict(), weights_buffer)
+
+        return send_file(io.BytesIO(weights_buffer.getbuffer()), download_name = model.name + ".pth")
+    
+    def post(self, nn_name):
+        if not session.get(nn_name):
+            abort(404)
+        else:
+            model = session.get(nn_name) 
 
         return 'Ok'

@@ -1,4 +1,6 @@
 import torch
+import os
+import shutil
 
 
 def get_children(model: torch.nn.Module):
@@ -31,3 +33,15 @@ def create_batch(dataset, start_i, batch_size):
     x = torch.cat(x, dim=0)
     y = torch.cat(y, dim=0)
     return (x, y)
+
+
+def remove_folder_content(folder):
+    for filename in os.listdir(folder):
+        file_path = os.path.join(folder, filename)
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+        except Exception as e:
+            print("Failed to delete %s. Reason: %s" % (file_path, e))

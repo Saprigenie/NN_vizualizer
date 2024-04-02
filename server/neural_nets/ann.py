@@ -61,6 +61,7 @@ class ANN(BaseGraphNN):
         self.train_i += len(x_batch)
         if self.train_i >= len(train_dataset):
             self.train_i = 0
+            self.curr_epoch += 1
 
         # Обновляем текущий loss_value
         self.loss_value = loss.detach().cpu().numpy().item()
@@ -136,7 +137,7 @@ class ANN(BaseGraphNN):
 
         return data_states
 
-    def backward_graph_batch(self):
+    def backward_graph_batch(self, train_dataset):
         weights_states = [{
             "graphLayerIndex": 1,
             "w": self.lin_1.weight.tolist()
@@ -159,11 +160,4 @@ class ANN(BaseGraphNN):
 
         self.state_forward = True
 
-        return {
-            "model": self.name,
-            "loss": self.loss_value,
-            "type": "backward",
-            "layerIndex": 0,
-            "ended": False,
-            "weights": list(reversed(weights_states))
-        }
+        return self.form_train_state("backward", list(reversed(weights_states)), len(train_dataset))

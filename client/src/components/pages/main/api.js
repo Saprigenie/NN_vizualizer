@@ -30,7 +30,7 @@ export async function setGraphElements(cy, nnName) {
   addGraphHandlers(cy)
 }
 
-export async function nnForward(cy, nnName) {
+export async function nnForwardServer(cy, nnName) {
   // С сервера приходят веса выбранной нейронной сети для отображения (forward или backward).
   if (!nnWeights[nnName] || nnWeights[nnName].ended) {
     nnWeights[nnName] = (await api.get('/nn/train/' + nnName)).data
@@ -46,14 +46,18 @@ export async function nnForward(cy, nnName) {
     // Считаем индекс следующего отображаемого слоя.
     layerIndex += 1
     nnWeights[nnName].layerIndex += 1
+    // Переходим на новый набор данных в батче, если уже обновили все слои для одного набора.
     if (layerIndex >= nnWeights[nnName].weights[dataIndex].length) {
       nnWeights[nnName].layerIndex = 0
       dataIndex += 1
       nnWeights[nnName].dataIndex += 1
+      let oldData = nnWeights[nnName].trainStep.data
+      nnWeights[nnName].trainStep.data = { curr: oldData.curr + 1, max: oldData.max }
     }
     // Если все данные пройдены, то ставим флаг завершения.
     if (dataIndex >= nnWeights[nnName].weights.length) {
       nnWeights[nnName].ended = true
+      nnWeights[nnName].trainStep.data.curr -= 1
     }
   } else if (nnWeights[nnName].type == 'backward') {
     // Запоминаем некоторые поля для краткости записи.
@@ -61,6 +65,10 @@ export async function nnForward(cy, nnName) {
     let weights = nnWeights[nnName].weights[layerIndex].w
     let graphLayerIndex = nnWeights[nnName].weights[layerIndex].graphLayerIndex // Индекс слоя, среди всех слоев нейронной сети.
     updateWeights(cy, graphLayerIndex, weights, nnWeights[nnName].model)
+
+    // По всем наборам данных из батча уже прошлись.
+    let oldData = nnWeights[nnName].trainStep.data
+    nnWeights[nnName].trainStep.data = { curr: oldData.max, max: oldData.max }
 
     // Считаем индекс следующего отображаемого слоя.
     layerIndex += 1
@@ -71,23 +79,30 @@ export async function nnForward(cy, nnName) {
       updateLoss(cy, nnWeights[nnName].loss, nnWeights[nnName].model)
     }
   }
+
+  // Возвращаем текущий шаг обучения.
+  return nnWeights[nnName].trainStep
 }
 
-export async function changeBatchSize(nnName, batchSize) {
+export async function setBatchSizeServer(nnName, batchSize) {
   await api.put('/nn/batch_size/' + nnName + '/' + batchSize)
 }
 
-export async function getBatchSize(nnName, batchSize) {
+export async function getBatchSizeServer(nnName, batchSize) {
   return (await api.get('/nn/batch_size/' + nnName)).data
 }
 
-export async function nnRestart(cy, nnName) {
+export async function nnRestartServer(cy, nnName) {
   await api.put('/nn/restart/' + nnName)
 
   // Пересоздаем граф.
   cy.elements().remove()
   nnWeights[nnName] = null
   setGraphElements(cy, nnName)
+}
+
+export async function downloadWeightsServer(nnName) {
+  await api.get('/nn/weights/' + nnName)
 }
 
 function addGraphHandlers(cy) {
