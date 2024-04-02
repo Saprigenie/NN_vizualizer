@@ -224,6 +224,8 @@ class CNN(BaseGraphNN):
             "w": self.lin_2.bias.tolist()
         }]
 
-        self.state_forward = True
-
-        return self.form_train_state("backward", list(reversed(weights_states)), len(train_dataset))
+        return {
+            "dataIndex": 0,
+            "layerIndex": 0,
+            "weights": list(reversed(weights_states))
+        }

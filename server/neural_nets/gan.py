@@ -103,13 +103,17 @@ class GANgenerator(BaseGraphNN):
         return data_states
     
     def forward_graph_batch(self, train_dataset, train_i):
-        x_batch, _ = create_batch(train_dataset, self.train_i, self.batch_size)
+        x_batch, _ = create_batch(train_dataset, train_i, self.batch_size)
         # Подменяем данные на рандомный тензор, так как это стандартный вход для генератора.
         x_batch = torch.randn(len(x_batch), self.in_features)
 
-        return self.form_train_state("forward", [self.forward_graph(data) for data in x_batch], len(train_dataset), train_i)
+        return {
+            "dataIndex": 0,
+            "layerIndex": 0,
+            "weights": [self.forward_graph(data) for data in x_batch]
+        }
 
-    def backward_graph_batch(self, train_dataset, train_i):
+    def backward_graph_batch(self, train_dataset):
         weights_states = [{
             "graphLayerIndex": 1,
             "w": self.lin_1.weight.tolist()
@@ -130,7 +134,14 @@ class GANgenerator(BaseGraphNN):
             "w": self.lin_3.bias.tolist()
         }]
 
-        return self.form_train_state("backward", list(reversed(weights_states)), len(train_dataset), train_i)
+        return {
+            "dataIndex": 0,
+            "layerIndex": 0,
+            "weights": list(reversed(weights_states))
+        }
+    
+    def graph_batch(self, forward_weights, backward_weights, train_dataset, train_i):
+        return self.form_train_state("forward", forward_weights, backward_weights, len(train_dataset), train_i)
 
 
 class GANdiscriminator(BaseGraphNN):
@@ -238,15 +249,19 @@ class GANdiscriminator(BaseGraphNN):
     
     def forward_graph_batch(self, train_dataset, generator, train_i):
         # Половина батча - реальные данные, половина - фейковые.
-        x_batch, _ = create_batch(train_dataset, self.train_i, self.batch_size // 2)
+        x_batch, _ = create_batch(train_dataset, train_i, self.batch_size // 2)
         x_noise = torch.randn(self.batch_size // 2, generator.in_features)
         x_gen_batch = generator(x_noise)
 
         x_batch = torch.cat((x_batch, x_gen_batch), dim=0)
 
-        return self.form_train_state("forward", [self.forward_graph(data) for data in x_batch], len(train_dataset) * 2, train_i * 2)
+        return {
+            "dataIndex": 0,
+            "layerIndex": 0,
+            "weights": [self.forward_graph(data) for data in x_batch]
+        }
 
-    def backward_graph_batch(self, train_dataset, train_i):
+    def backward_graph_batch(self, train_dataset):
         weights_states = [{
             "graphLayerIndex": 1,
             "w": self.lin_1.weight.tolist()
@@ -267,7 +282,14 @@ class GANdiscriminator(BaseGraphNN):
             "w": self.lin_3.bias.tolist()
         }]
 
-        return self.form_train_state("backward", list(reversed(weights_states)), len(train_dataset) * 2, train_i * 2)
+        return {
+            "dataIndex": 0,
+            "layerIndex": 0,
+            "weights": list(reversed(weights_states))
+        }
+    
+    def graph_batch(self, forward_weights, backward_weights, train_dataset, train_i):
+        return self.form_train_state("forward", forward_weights, backward_weights, 2 * len(train_dataset), 2 * train_i)
 
 
 class GAN(BaseGraphNN):
@@ -367,22 +389,19 @@ class GAN(BaseGraphNN):
             self.generator.graph_structure(),
             self.discriminator.graph_structure()
         ]
-    
-    def forward_graph_batch(self, train_dataset):
-        self.state_forward = False
-
-        # Узнаем, у кого сейчас форвард по флагу.
+        
+    def graph_batch(self, train_dataset):
+        # Узнаем, у кого сейчас обучение.
         if self.generator_training:
-            return self.generator.forward_graph_batch(train_dataset, self.train_i)
-        else:
-            return self.discriminator.forward_graph_batch(train_dataset, self.generator, self.train_i)
+            forward_weights = self.generator.forward_graph_batch(train_dataset, self.train_i)
+            self.train_batch(train_dataset)
+            backward_weights = self.generator.backward_graph_batch(train_dataset)
 
-    def backward_graph_batch(self, train_dataset):
-        self.state_forward = True
-
-        # Узнаем, у кого сейчас обратное распространение по инвертированному флагу.
-        if not self.generator_training:
-            return self.generator.backward_graph_batch(train_dataset, self.train_i)
+            return self.generator.graph_batch(forward_weights, backward_weights, train_dataset, self.train_i)
         else:
-            return self.discriminator.backward_graph_batch(train_dataset, self.train_i)
+            forward_weights = self.discriminator.forward_graph_batch(train_dataset, self.generator, self.train_i)
+            self.train_batch(train_dataset)
+            backward_weights = self.discriminator.backward_graph_batch(train_dataset)
+
+            return self.discriminator.graph_batch(forward_weights, backward_weights, train_dataset, self.train_i)
     

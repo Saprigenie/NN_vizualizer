@@ -29,15 +29,10 @@ class NNTrain(Resource):
             abort(404)
         else:
             model = session.get(nn_name) 
-        
-        if model.state_forward:
-            weights_update = model.forward_graph_batch(session.get("digits_dataset"))
-        else:
-            model.train_batch(session.get("digits_dataset"))
-            weights_update = model.backward_graph_batch(session.get("digits_dataset"))
 
+        dataset = session.get("digits_dataset")
 
-        return weights_update
+        return model.graph_batch(dataset)
     
 @api.route('/restart/<nn_name>')
 class BatchSize(Resource):

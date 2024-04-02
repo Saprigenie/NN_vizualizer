@@ -32,8 +32,6 @@ const props = defineProps({
   }
 })
 
-console.log(props)
-
 const emit = defineEmits(['hide', 'hidden', 'show', 'shown', 'mounted'])
 
 onMounted(() => {

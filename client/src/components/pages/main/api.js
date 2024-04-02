@@ -8,10 +8,11 @@ import { ToastTypes } from '@/store/toaster'
 // Запомненный прошлый нажатый узел.
 let prevTapNode = null
 // Текущие, пришедшие с сервера, веса нейронок для отображения (forward или backward).
-let nnWeights = {
+let nnStates = {
   ann: null,
   cnn: null,
-  gan: null
+  generator: null,
+  discriminator: null
 }
 
 export async function setGraphElements(cy, nnName) {
@@ -35,56 +36,57 @@ export async function setGraphElements(cy, nnName) {
 
 export async function nnForwardServer(cy, nnName) {
   // С сервера приходят веса выбранной нейронной сети для отображения (forward или backward).
-  if (!nnWeights[nnName] || nnWeights[nnName].ended) {
-    nnWeights[nnName] = (await api.get('/nn/train/' + nnName)).data
+  if (!nnStates[nnName] || nnStates[nnName].ended) {
+    nnStates[nnName] = (await api.get('/nn/train/' + nnName)).data
   }
-  if (nnWeights[nnName].type == 'forward') {
+  if (nnStates[nnName].type == 'forward') {
     // Запоминаем некоторые поля для краткости записи.
-    let dataIndex = nnWeights[nnName].dataIndex // Сервер присылает веса сразу для батча обработанных данных.
-    let layerIndex = nnWeights[nnName].layerIndex // Индекс слоя, среди тех, которые нужно обновить.
-    let weights = nnWeights[nnName].weights[dataIndex][layerIndex].w
-    let graphLayerIndex = nnWeights[nnName].weights[dataIndex][layerIndex].graphLayerIndex // Индекс слоя, среди всех слоев нейронной сети.
-    updateWeights(cy, graphLayerIndex, weights, nnWeights[nnName].model)
+    let dataIndex = nnStates[nnName].forwardWeights.dataIndex // Сервер присылает веса сразу для батча обработанных данных.
+    let layerIndex = nnStates[nnName].forwardWeights.layerIndex // Индекс слоя, среди тех, которые нужно обновить.
+    let weights = nnStates[nnName].forwardWeights.weights[dataIndex][layerIndex].w
+    let graphLayerIndex =
+      nnStates[nnName].forwardWeights.weights[dataIndex][layerIndex].graphLayerIndex // Индекс слоя, среди всех слоев нейронной сети.
+    updateWeights(cy, graphLayerIndex, weights, nnStates[nnName].model)
 
     // Считаем индекс следующего отображаемого слоя.
     layerIndex += 1
-    nnWeights[nnName].layerIndex += 1
+    nnStates[nnName].forwardWeights.layerIndex += 1
     // Переходим на новый набор данных в батче, если уже обновили все слои для одного набора.
-    if (layerIndex >= nnWeights[nnName].weights[dataIndex].length) {
-      nnWeights[nnName].layerIndex = 0
+    if (layerIndex >= nnStates[nnName].forwardWeights.weights[dataIndex].length) {
+      nnStates[nnName].forwardWeights.layerIndex = 0
       dataIndex += 1
-      nnWeights[nnName].dataIndex += 1
-      let oldData = nnWeights[nnName].trainStep.data
-      nnWeights[nnName].trainStep.data = { curr: oldData.curr + 1, max: oldData.max }
+      nnStates[nnName].forwardWeights.dataIndex += 1
+      let oldData = nnStates[nnName].trainStep.data
+      nnStates[nnName].trainStep.data = { curr: oldData.curr + 1, max: oldData.max }
     }
     // Если все данные пройдены, то ставим флаг завершения.
-    if (dataIndex >= nnWeights[nnName].weights.length) {
-      nnWeights[nnName].ended = true
-      nnWeights[nnName].trainStep.data.curr -= 1
+    if (dataIndex >= nnStates[nnName].forwardWeights.weights.length) {
+      nnStates[nnName].type = 'backward'
+      nnStates[nnName].trainStep.data.curr -= 1
     }
-  } else if (nnWeights[nnName].type == 'backward') {
+  } else if (nnStates[nnName].type == 'backward') {
     // Запоминаем некоторые поля для краткости записи.
-    let layerIndex = nnWeights[nnName].layerIndex
-    let weights = nnWeights[nnName].weights[layerIndex].w
-    let graphLayerIndex = nnWeights[nnName].weights[layerIndex].graphLayerIndex // Индекс слоя, среди всех слоев нейронной сети.
-    updateWeights(cy, graphLayerIndex, weights, nnWeights[nnName].model)
+    let layerIndex = nnStates[nnName].backwardWeights.layerIndex
+    let weights = nnStates[nnName].backwardWeights.weights[layerIndex].w
+    let graphLayerIndex = nnStates[nnName].backwardWeights.weights[layerIndex].graphLayerIndex // Индекс слоя, среди всех слоев нейронной сети.
+    updateWeights(cy, graphLayerIndex, weights, nnStates[nnName].model)
 
     // По всем наборам данных из батча уже прошлись.
-    let oldData = nnWeights[nnName].trainStep.data
-    nnWeights[nnName].trainStep.data = { curr: oldData.max, max: oldData.max }
+    let oldData = nnStates[nnName].trainStep.data
+    nnStates[nnName].trainStep.data = { curr: oldData.max, max: oldData.max }
 
     // Считаем индекс следующего отображаемого слоя.
     layerIndex += 1
-    nnWeights[nnName].layerIndex += 1
+    nnStates[nnName].backwardWeights.layerIndex += 1
     // Если все данные пройдены, то ставим флаг завершения.
-    if (layerIndex >= nnWeights[nnName].weights.length) {
-      nnWeights[nnName].ended = true
-      updateLoss(cy, nnWeights[nnName].loss, nnWeights[nnName].model)
+    if (layerIndex >= nnStates[nnName].backwardWeights.weights.length) {
+      nnStates[nnName].ended = true
+      updateLoss(cy, nnStates[nnName].loss, nnStates[nnName].model)
     }
   }
 
   // Возвращаем текущий шаг обучения.
-  return nnWeights[nnName].trainStep
+  return nnStates[nnName].trainStep
 }
 
 export async function setBatchSizeServer(nnName, batchSize, toaster) {
@@ -107,14 +109,14 @@ export async function nnRestartServer(cy, nnName, toaster) {
     // Добавляем сообщение пользователю.
     toaster.addToast({
       title: 'Информация',
-      body: 'Модель ' + nnName + ' польностью обнулена.',
+      body: 'Модель ' + nnName + ' полностью обнулена.',
       type: ToastTypes.success
     })
   })
 
   // Пересоздаем граф.
   cy.elements().remove()
-  nnWeights[nnName] = null
+  nnStates[nnName] = null
   setGraphElements(cy, nnName)
 }
 

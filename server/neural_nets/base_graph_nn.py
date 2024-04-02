@@ -22,9 +22,6 @@ class BaseGraphNN(nn.Module):
         self.curr_epoch = 1
         self.train_i = 0
 
-        # Какое состояние нейросети для отправки весов на клиент (forward или backward)
-        self.state_forward = True 
-
     def set_batch_size(self, batch_size):
         """
         Устанавливает размер батча обучения нейронной сети.
@@ -104,11 +101,11 @@ class BaseGraphNN(nn.Module):
         """
         return { 
             "data": {"curr": 1, "max": self.batch_size},
-            "batch": {"curr": (train_i // self.batch_size) + 1, "max": dataset_len // self.batch_size},
+            "batch": {"curr": (train_i // self.batch_size), "max": dataset_len // self.batch_size},
             "epoch": {"curr": self.curr_epoch},
         }
 
-    def form_train_state(self, type, weights, dataset_len, train_i = None):
+    def form_train_state(self, start_type, forward_weights, backward_weights, dataset_len, train_i = None):
         """
         Возвращает стандартное сосотояние нейронной сети для отправки на клиент.
         """
@@ -116,21 +113,24 @@ class BaseGraphNN(nn.Module):
         return {
             "model": self.name,
             "loss": self.loss_value,
-            "type": type,
-            "dataIndex": 0,
-            "layerIndex": 0,
+            "type": start_type,
             "ended": False,
-            "weights": weights,
+            "forwardWeights": forward_weights,
+            "backwardWeights": backward_weights,
             "trainStep": self.form_train_step(dataset_len, train_i)
         }
 
-    def forward_graph_batch(self, train_dataset):
+    def forward_graph_batch(self, train_dataset, start_index = None):
         """
         forward_graph для целого батча.
         """
-        x_batch, _ = create_batch(train_dataset, self.train_i, self.batch_size)
-        self.state_forward = False
-        return self.form_train_state("forward", [self.forward_graph(data) for data in x_batch], len(train_dataset))
+        if (start_index is None): start_index = self.train_i
+        x_batch, _ = create_batch(train_dataset, start_index, self.batch_size)
+        return {
+            "dataIndex": 0,
+            "layerIndex": 0,
+            "weights": [self.forward_graph(data) for data in x_batch]
+        }
 
     def backward_graph_batch(self):
         """
@@ -139,3 +139,14 @@ class BaseGraphNN(nn.Module):
         номерами в графовом представлении нейронной сети graph_structure()
         """
         pass
+
+    def graph_batch(self, train_dataset):
+        """
+        Прямой и обратный проход по нейронной сети.
+        """
+        forward_weights = self.forward_graph_batch(train_dataset)
+        self.train_batch(train_dataset)
+        backward_weights = self.backward_graph_batch(train_dataset)
+
+        return self.form_train_state("forward", forward_weights, backward_weights, len(train_dataset))
+
