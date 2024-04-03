@@ -148,6 +148,8 @@
       <div class="col">
         <button
           class="btn btn-dark"
+          v-on:click="nnBack()"
+          :disabled="!backEnable"
           data-bs-toggle="tooltip"
           data-bs-placement="top"
           title="Совершает 1 шаг назад прохода данных по нейронной сети (в пределах 1 батча)."
@@ -183,20 +185,20 @@
 import cytoscape from 'cytoscape'
 import * as bootstrap from 'bootstrap'
 import { onMounted, reactive, ref } from 'vue'
-import { useToaster, ToastTypes } from '@/store/toaster'
 import {
   setGraphElements,
   nnForwardServer,
+  nnBackServer,
   setBatchSizeServer,
   getBatchSizeServer,
   nnRestartServer,
   downloadWeightsServer,
   uploadWeightsServer
 } from './api'
+import { useToaster } from '@/store/toaster'
 import { graphStyles } from './styleGraph'
 
-const toaster = useToaster()
-
+// Будующий экземпляр холста, на котором строится график cytospace.
 let cy
 // Выбранный номер нейронной сети.
 let nnNameChoice = ref('ann')
@@ -208,6 +210,10 @@ let trainStep = reactive({
   batch: { curr: '?', max: '?' },
   epoch: { curr: '?' }
 })
+// Включена или нет клавиша назад на шаг.
+let backEnable = ref(false)
+// Для отображения сообщений пользователю.
+const toaster = useToaster()
 
 onMounted(() => {
   cy = cytoscape({
@@ -235,13 +241,23 @@ async function reloadNN(cy, newChoice) {
   nnNameChoice.value = newChoice
   setGraphElements(cy, nnNameChoice.value)
   batchSize.value = await getBatchSizeServer(nnNameChoice.value)
+  backEnable.value = false
 }
 
 async function nnForward() {
-  let newTrainStep = await nnForwardServer(cy, nnNameChoice.value)
+  let { newBackEnable, newTrainStep } = await nnForwardServer(cy, nnNameChoice.value)
   trainStep.data = newTrainStep.data
   trainStep.batch = newTrainStep.batch
   trainStep.epoch = newTrainStep.epoch
+  backEnable.value = newBackEnable
+}
+
+async function nnBack() {
+  let { newBackEnable, newTrainStep } = nnBackServer(cy, nnNameChoice.value)
+  trainStep.data = newTrainStep.data
+  trainStep.batch = newTrainStep.batch
+  trainStep.epoch = newTrainStep.epoch
+  backEnable.value = newBackEnable
 }
 
 function setBatchSize(newBatchSize) {

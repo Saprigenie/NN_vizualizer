@@ -10,12 +10,14 @@ export function updateWeights(cy, graphLayerIndex, weights, idPrefix) {
     let id = element.data('id')
     return id.startsWith(idPrefix + '_' + graphLayerIndex + '_')
   })
-  // Подсвечиваем их.
-  changeWeightsElements.addClass('highlight')
+
+  // Убираем подсветку с прошлых подсвеченных.
   if (prevHighlightedNodes) {
     prevHighlightedNodes.removeClass('highlight')
   }
   prevHighlightedNodes = changeWeightsElements
+  // Подсвечиваем их.
+  changeWeightsElements.addClass('highlight')
 
   // В зависимости от типа элемента обновляем веса:
   let type = changeWeightsElements[0].data('type')
