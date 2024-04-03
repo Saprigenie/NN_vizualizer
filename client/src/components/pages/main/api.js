@@ -38,157 +38,135 @@ export async function setGraphElements(cy, nnName) {
   addGraphHandlers(cy)
 }
 
-export async function nnForwardServer(cy, nnName) {
+export async function nnForwardServer(cy, nnNameServer) {
+  // Некоторые переменные для удобства доступа.
+  let state = nnStates[nnNameServer]
+  let modelName = state ? state.model : nnNameServer
+
   // Сохраняем текущее состояние в старое, когда оно завершено.
-  if (nnStates[nnName] && nnStates[nnName].ended) {
-    nnOldStates[nnStates[nnName].model] = nnStates[nnName]
+  if (state && state.ended) {
+    nnOldStates[modelName] = state
   }
   // С сервера приходят веса выбранной нейронной сети для отображения (forward или backward).
-  if (!nnStates[nnName] || nnStates[nnName].ended) {
-    nnStates[nnName] = (await api.get('/nn/train/' + nnName)).data
+  if (!state || state.ended) {
+    nnStates[nnNameServer] = (await api.get('/nn/train/' + nnNameServer)).data
+    state = nnStates[nnNameServer]
+    modelName = state.model
   }
-  if (nnStates[nnName].type == 'forward') {
-    // Запоминаем некоторые поля для краткости записи.
-    let dataIndex = nnStates[nnName].forwardWeights.dataIndex // Сервер присылает веса сразу для батча обработанных данных.
-    let layerIndex = nnStates[nnName].forwardWeights.layerIndex // Индекс слоя, среди тех, которые нужно обновить.
-    let weights = nnStates[nnName].forwardWeights.weights[dataIndex][layerIndex].w
-    let graphLayerIndex =
-      nnStates[nnName].forwardWeights.weights[dataIndex][layerIndex].graphLayerIndex // Индекс слоя, среди всех слоев нейронной сети.
-    updateWeights(cy, graphLayerIndex, weights, nnStates[nnName].model)
+
+  // Некоторые переменные для удобства доступа.
+  let forwardWeights = state.forwardWeights
+  let backwardWeights = state.backwardWeights
+  let oldData = state.trainStep.data
+
+  if (state.type == 'forward') {
+    let layer = forwardWeights.weights[forwardWeights.dataIndex][forwardWeights.layerIndex]
+    updateWeights(cy, layer.graphLayerIndex, layer.w, modelName)
 
     // Считаем индекс следующего отображаемого слоя.
-    layerIndex += 1
-    nnStates[nnName].forwardWeights.layerIndex += 1
+    forwardWeights.layerIndex += 1
     // Переходим на новый набор данных в батче, если уже обновили все слои для одного набора.
-    if (layerIndex >= nnStates[nnName].forwardWeights.weights[dataIndex].length) {
-      nnStates[nnName].forwardWeights.layerIndex = 0
-      dataIndex += 1
-      nnStates[nnName].forwardWeights.dataIndex += 1
-      let oldData = nnStates[nnName].trainStep.data
-      nnStates[nnName].trainStep.data = { curr: oldData.curr + 1, max: oldData.max }
+    if (forwardWeights.layerIndex >= forwardWeights.weights[forwardWeights.dataIndex].length) {
+      forwardWeights.layerIndex = 0
+      forwardWeights.dataIndex += 1
+      state.trainStep.data = { curr: oldData.curr + 1, max: oldData.max }
     }
     // Если все данные пройдены, то ставим флаг завершения.
-    if (dataIndex >= nnStates[nnName].forwardWeights.weights.length) {
-      nnStates[nnName].type = 'backward'
-      nnStates[nnName].trainStep.data.curr -= 1
+    if (forwardWeights.dataIndex >= forwardWeights.weights.length) {
+      state.type = 'backward'
+      state.trainStep.data.curr -= 1
     }
-  } else if (nnStates[nnName].type == 'backward') {
-    // Запоминаем некоторые поля для краткости записи.
-    let layerIndex = nnStates[nnName].backwardWeights.layerIndex
-    let weights = nnStates[nnName].backwardWeights.weights[layerIndex].w
-    let graphLayerIndex = nnStates[nnName].backwardWeights.weights[layerIndex].graphLayerIndex // Индекс слоя, среди всех слоев нейронной сети.
-    updateWeights(cy, graphLayerIndex, weights, nnStates[nnName].model)
+  } else if (state.type == 'backward') {
+    let layer = backwardWeights.weights[backwardWeights.layerIndex]
+    updateWeights(cy, layer.graphLayerIndex, layer.w, modelName)
 
     // По всем наборам данных из батча уже прошлись.
-    let oldData = nnStates[nnName].trainStep.data
-    nnStates[nnName].trainStep.data = { curr: oldData.max, max: oldData.max }
+    state.trainStep.data = { curr: oldData.max, max: oldData.max }
 
     // Считаем индекс следующего отображаемого слоя.
-    layerIndex += 1
-    nnStates[nnName].backwardWeights.layerIndex += 1
+    backwardWeights.layerIndex += 1
     // Если все данные пройдены, то ставим флаг завершения.
-    if (layerIndex >= nnStates[nnName].backwardWeights.weights.length) {
-      nnStates[nnName].ended = true
-      updateLoss(cy, nnStates[nnName].loss, nnStates[nnName].model)
+    if (backwardWeights.layerIndex >= backwardWeights.weights.length) {
+      state.ended = true
+      updateLoss(cy, state.loss, modelName)
     }
   }
   // Считаем условие для активации клавиши с возможностью обратно откатить шаги.
   let newBackEnable =
-    nnOldStates[nnStates[nnName].model] &&
-    (nnStates[nnName].type == 'backward' ||
-      nnStates[nnName].forwardWeights.dataIndex > 0 ||
-      nnStates[nnName].forwardWeights.layerIndex > 1)
+    nnOldStates[modelName] &&
+    (state.type == 'backward' || forwardWeights.dataIndex > 0 || forwardWeights.layerIndex > 1)
 
   // Возвращаем текущий шаг обучения.
-  return { newBackEnable: newBackEnable, newTrainStep: nnStates[nnName].trainStep }
+  return { newBackEnable: newBackEnable, newTrainStep: state.trainStep }
 }
 
-export function nnBackServer(cy, nnName) {
+export function nnBackServer(cy, nnNameServer) {
+  // Некоторые переменные для удобства доступа.
+  let state = nnStates[nnNameServer]
+  let modelName = state.model
+  let oldState = nnOldStates[modelName]
+  let forwardWeights = state.forwardWeights
+  let backwardWeights = state.backwardWeights
+  let oldData = state.trainStep.data
+
   // Откатываемся назад, поэтому шаги по текущему батчу еще точно не завершены
-  nnStates[nnName].ended = false
+  state.ended = false
 
   // Внутренняя функция, которая на 1 шаг назад откатывает по прямому проходу по nn.
   function forwardBack() {
     // Считаем индекс прошлого отображаемого слоя.
-    nnStates[nnName].forwardWeights.layerIndex -= 1
+    forwardWeights.layerIndex -= 1
 
     // Переходим на старый набор данных в батче, если уже обновили все слои для одного набора.
-    if (nnStates[nnName].forwardWeights.layerIndex < 0) {
-      nnStates[nnName].forwardWeights.dataIndex -= 1
-      nnStates[nnName].forwardWeights.layerIndex =
-        nnStates[nnName].forwardWeights.weights[nnStates[nnName].forwardWeights.dataIndex].length -
-        1
-      let oldData = nnStates[nnName].trainStep.data
-      nnStates[nnName].trainStep.data = { curr: oldData.curr - 1, max: oldData.max }
+    if (forwardWeights.layerIndex < 0) {
+      forwardWeights.dataIndex -= 1
+      forwardWeights.layerIndex = forwardWeights.weights[forwardWeights.dataIndex].length - 1
+      state.trainStep.data = { curr: oldData.curr - 1, max: oldData.max }
     }
 
-    // Запоминаем некоторые поля для краткости записи.
-    let dataIndex = nnStates[nnName].forwardWeights.dataIndex // Сервер присылает веса сразу для батча обработанных данных.
-    let layerIndex = nnStates[nnName].forwardWeights.layerIndex // Индекс слоя, среди тех, которые нужно обновить.
-
     // Обновляем последний слой старыми весами.
-    updateWeights(
-      cy,
-      nnOldStates[nnStates[nnName].model].forwardWeights.weights[dataIndex][layerIndex]
-        .graphLayerIndex,
-      nnOldStates[nnStates[nnName].model].forwardWeights.weights[dataIndex][layerIndex].w,
-      nnStates[nnName].model
-    )
+    let oldLayer =
+      oldState.forwardWeights.weights[forwardWeights.dataIndex][forwardWeights.layerIndex]
+    updateWeights(cy, oldLayer.graphLayerIndex, oldLayer.w, modelName)
   }
 
   // Внутренняя функция, которая на 1 шаг назад откатывает по обратному проходу по nn.
   function backwardBack() {
     // Считаем индекс прошлого отображаемого слоя.
-    nnStates[nnName].backwardWeights.layerIndex -= 1
+    backwardWeights.layerIndex -= 1
 
     // Если вернулись после того, как все данные пройдены.
-    if (
-      nnStates[nnName].backwardWeights.layerIndex ==
-      nnStates[nnName].backwardWeights.weights.length - 1
-    ) {
-      updateLoss(
-        cy,
-        nnOldStates[nnStates[nnName].model].loss,
-        nnOldStates[nnStates[nnName].model].model
-      )
+    if (backwardWeights.layerIndex == backwardWeights.weights.length - 1) {
+      updateLoss(cy, oldState.loss, oldState.model)
     }
 
-    // Запоминаем некоторые поля для краткости записи.
-    let layerIndex = nnStates[nnName].backwardWeights.layerIndex
-    updateWeights(
-      cy,
-      nnOldStates[nnStates[nnName].model].backwardWeights.weights[layerIndex].graphLayerIndex,
-      nnOldStates[nnStates[nnName].model].backwardWeights.weights[layerIndex].w,
-      nnStates[nnName].model
-    )
+    // Обновляем последний слой старыми весами.
+    let oldLayer = oldState.backwardWeights.weights[backwardWeights.layerIndex]
+    updateWeights(cy, oldLayer.graphLayerIndex, oldLayer.w, modelName)
 
     // По всем наборам данных из батча уже прошлись.
-    let oldData = nnStates[nnName].trainStep.data
-    nnStates[nnName].trainStep.data = { curr: oldData.max, max: oldData.max }
+    state.trainStep.data = { curr: oldData.max, max: oldData.max }
   }
 
-  if (nnStates[nnName].type == 'forward') {
+  if (state.type == 'forward') {
     forwardBack()
-  } else if (nnStates[nnName].type == 'backward') {
+  } else if (state.type == 'backward') {
     // Если мы собираемся обратно откатываться по обратному проходу, но при этом мы только на него переключились, то возвращаемся
     // на форвард.
-    if (nnStates[nnName].backwardWeights.layerIndex == 0) {
-      nnStates[nnName].type = 'forward'
+    if (backwardWeights.layerIndex == 0) {
+      state.type = 'forward'
       forwardBack()
-      let oldData = nnStates[nnName].trainStep.data
-      nnStates[nnName].trainStep.data = { curr: oldData.max, max: oldData.max }
+      state.trainStep.data = { curr: oldData.max, max: oldData.max }
     } else {
       backwardBack()
     }
   }
   // Считаем условие для активации клавиши с возможностью обратно откатить шаги.
   let newBackEnable =
-    nnStates[nnName].type == 'backward' ||
-    nnStates[nnName].forwardWeights.dataIndex > 0 ||
-    nnStates[nnName].forwardWeights.layerIndex > 1
+    state.type == 'backward' || forwardWeights.dataIndex > 0 || forwardWeights.layerIndex > 1
 
   // Возвращаем текущий шаг обучения.
-  return { newBackEnable: newBackEnable, newTrainStep: nnStates[nnName].trainStep }
+  return { newBackEnable: newBackEnable, newTrainStep: state.trainStep }
 }
 
 export async function setBatchSizeServer(nnName, batchSize, toaster) {
