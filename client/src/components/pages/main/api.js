@@ -125,9 +125,19 @@ export function nnBackServer(cy, nnNameServer) {
     }
 
     // Обновляем последний слой старыми весами.
-    let oldLayer =
-      oldState.forwardWeights.weights[forwardWeights.dataIndex][forwardWeights.layerIndex]
+    let oldLayer = forwardWeights.dataIndex
+      ? forwardWeights.weights[forwardWeights.dataIndex - 1][forwardWeights.layerIndex]
+      : oldState.forwardWeights.weights[forwardWeights.weights.length - 1][
+          forwardWeights.layerIndex
+        ]
     updateWeights(cy, oldLayer.graphLayerIndex, oldLayer.w, modelName)
+    // Подсвечиваем последний ОБНОВЛЕННЫЙ слой.
+    let oldOldLayer = forwardWeights.layerIndex
+      ? forwardWeights.weights[forwardWeights.dataIndex][forwardWeights.layerIndex - 1]
+      : forwardWeights.weights[forwardWeights.dataIndex - 1][
+          forwardWeights.weights[forwardWeights.dataIndex - 1].length - 1
+        ]
+    updateWeights(cy, oldOldLayer.graphLayerIndex, oldOldLayer.w, modelName)
   }
 
   // Внутренняя функция, которая на 1 шаг назад откатывает по обратному проходу по nn.
@@ -143,6 +153,13 @@ export function nnBackServer(cy, nnNameServer) {
     // Обновляем последний слой старыми весами.
     let oldLayer = oldState.backwardWeights.weights[backwardWeights.layerIndex]
     updateWeights(cy, oldLayer.graphLayerIndex, oldLayer.w, modelName)
+    // Подсвечиваем последний ОБНОВЛЕННЫЙ слой.
+    let oldOldLayer = backwardWeights.layerIndex
+      ? oldState.backwardWeights.weights[backwardWeights.layerIndex - 1]
+      : forwardWeights.weights[forwardWeights.weights.length - 1][
+          forwardWeights.weights[forwardWeights.weights.length - 1].length - 1
+        ]
+    updateWeights(cy, oldOldLayer.graphLayerIndex, oldOldLayer.w, modelName)
 
     // По всем наборам данных из батча уже прошлись.
     state.trainStep.data = { curr: oldData.max, max: oldData.max }
@@ -196,6 +213,7 @@ export async function nnRestartServer(cy, nnName, toaster) {
 
   // Пересоздаем граф.
   cy.elements().remove()
+  if (nnStates[nnName]) nnOldStates[nnStates[nnName].model] = null
   nnStates[nnName] = null
   setGraphElements(cy, nnName)
 }
