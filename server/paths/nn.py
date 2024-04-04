@@ -7,9 +7,13 @@ from config import NN_NAMES
 from neural_nets.ann import ANN
 from neural_nets.cnn import CNN
 from neural_nets.gan import GAN
+from datasets.load_dataset import load_digits_dataset
 
 
 api = Namespace("nn", description="Операции с нейронными сетями.")
+datasets = [
+    load_digits_dataset()
+]
 
 @api.route('/state/<nn_name>')
 class NNStates(Resource):
@@ -30,9 +34,7 @@ class NNTrain(Resource):
         else:
             model = session.get(nn_name) 
 
-        dataset = session.get("digits_dataset")
-
-        return model.graph_batch(dataset)
+        return model.graph_batch(datasets[0])
     
 @api.route('/restart/<nn_name>')
 class BatchSize(Resource):
