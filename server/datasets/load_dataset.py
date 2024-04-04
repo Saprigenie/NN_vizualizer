@@ -17,3 +17,11 @@ def load_digits_dataset():
 
     # Возвращаем тренировочный датасет
     return train_dataset
+
+
+def load_xor_dataset():
+    X_train, y_train = [torch.tensor([[0., 0.], [0., 1.], [1., 0.], [1., 1.]]), torch.tensor([0, 1, 1, 0])]
+    train_dataset = TensorDataset(X_train, y_train)
+
+    # Возвращаем тренировочный датасет
+    return train_dataset

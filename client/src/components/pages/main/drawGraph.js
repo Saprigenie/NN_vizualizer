@@ -1,6 +1,7 @@
 import { STANDART_GRAPH_GAP } from '@/constants'
+import { getMax } from '@/api/utility'
 
-export function drawGraph(cy, graphData, offset = 0, idPrefix = '') {
+export function drawGraph(cy, graphData, name, loss, offset = 0, idPrefix = '') {
   // Добавляем сами узлы графа отображения нейронной сети.
   for (let layerNum = 0; layerNum < graphData.length; layerNum++) {
     let layer = graphData[layerNum]
@@ -26,42 +27,99 @@ export function drawGraph(cy, graphData, offset = 0, idPrefix = '') {
       case 'MergeFlatten':
         offset = addMergeFlatten(cy, layer, layerNum, offset, idPrefix)
         break
+      case 'Reshape':
+        offset = addReshape(cy, layer, layerNum, offset, idPrefix)
+        break
     }
   }
   // Добавляем связи.
   for (let layerNum = 0; layerNum < graphData.length; layerNum++) {
     let layer = graphData[layerNum]
-    if ((layer.type = 'Connection')) {
+    if (layer.type === 'Connection') {
       addConnection(cy, layer, layerNum, idPrefix)
     }
   }
 
+  // Добавляем рамку с названием нейронной сети и loss-ом.
+  addNNframe(cy, name, loss, idPrefix)
+
   // Возвращаем занятое нейронной сетью пространство.
-  return offset
+  return offset + STANDART_GRAPH_GAP
 }
 
-function addData(cy, layer, layerNum, offset = 0, idPrefix = '', nodeSize = [50, 50], spacing = 0) {
-  let centerCoeff = (layer.count * nodeSize[1] + spacing * (layer.count - 1)) / 2
+export function formElemId(type, params) {
+  switch (type) {
+    case 'Data':
+    case 'DataImage':
+    case 'Linear':
+    case 'Activation':
+    case 'Conv2d':
+    case 'MaxPool2d':
+    case 'MergeFlatten':
+    case 'Reshape':
+      return params.idPrefix + '_' + params.layerNum + '_' + params.nodeNum + 'N'
+    case 'DataImageCell':
+    case 'Conv2dCell':
+      return (
+        params.idPrefix +
+        '_cell_' +
+        params.layerNum +
+        '_' +
+        params.nodeNum +
+        '_' +
+        params.h +
+        '_' +
+        params.w +
+        'N'
+      )
+    case 'Connection':
+      return (
+        params.idPrefix +
+        '_' +
+        params.connNum +
+        '_' +
+        params.sourceNum +
+        '_' +
+        params.targetNum +
+        'E'
+      )
+    case 'Model':
+      return params.idPrefix + '_model'
+  }
+}
+
+function addData(
+  cy,
+  layer,
+  layerNum,
+  offset = 0,
+  idPrefix = '',
+  nodeSize = { x: 50, y: 50 },
+  spacing = 0
+) {
+  // Для отображения более ярким цветом элекментов с большим значением веса в слое.
+  let maxWeight = getMax(layer.weights)
+
+  let centerCoeff = (layer.count * nodeSize.y + spacing * (layer.count - 1)) / 2
   for (let nodeNum = 0; nodeNum < layer.count; nodeNum++) {
-    cy.add({
-      group: 'nodes',
-      data: {
-        id: idPrefix + '_' + layerNum + '_' + nodeNum + 'N',
-        type: 'Data',
-        value: layer.weights[nodeNum],
-        width: nodeSize[0] + 'px',
-        height: nodeSize[1] + 'px'
+    addNode(
+      cy,
+      formElemId(layer.type, { idPrefix: idPrefix, layerNum: layerNum, nodeNum: nodeNum }),
+      layer.type,
+      {
+        weight: layer.weights[nodeNum],
+        maxWeight: maxWeight
       },
-      position: {
-        x: offset + nodeSize[0] / 2,
-        y: (nodeSize[1] + spacing) * nodeNum + nodeSize[0] / 2 - centerCoeff // Центруем относительно начального угла обзора.
+      nodeSize,
+      {
+        x: offset + nodeSize.x / 2,
+        y: (nodeSize.y + spacing) * nodeNum + nodeSize.y / 2 - centerCoeff // Центруем относительно начального угла обзора.
       },
-      locked: true,
-      classes: ['data']
-    })
+      ['data', 'textCenter', 'textContrast', 'border']
+    )
   }
   // Возвращает offset для следующего слоя.
-  return offset + nodeSize[1] + STANDART_GRAPH_GAP
+  return offset + nodeSize.x + STANDART_GRAPH_GAP
 }
 
 function addDataImage(
@@ -70,64 +128,70 @@ function addDataImage(
   layerNum,
   offset = 0,
   idPrefix = '',
-  nodeSize = [50, 50],
+  nodeSize = { x: 50, y: 50 },
   spacing = 50
 ) {
-  let centerCoeff =
-    (layer.count[0] * layer.count[2] * nodeSize[1] + spacing * (layer.count[0] - 1)) / 2
-  for (let imageNum = 0; imageNum < layer.count[0]; imageNum++) {
+  // Для отображения более ярким цветом элекментов с большим значением веса в слое.
+  let maxWeight = getMax(layer.weights)
+
+  let blocksN = layer.count[0]
+  let cols = layer.count[2]
+  let rows = layer.count[1]
+
+  let blockSize = { x: rows * nodeSize.x, y: cols * nodeSize.y }
+
+  let centerCoeff = (blocksN * blockSize.y + spacing * (blocksN - 1)) / 2
+  for (let currBlock = 0; currBlock < blocksN; currBlock++) {
     // Добавляем 1 node - который в себе будет содержать данные изображения.
-    let elementSize = [layer.count[1] * nodeSize[0], layer.count[2] * nodeSize[1]]
-    cy.add({
-      group: 'nodes',
-      data: {
-        id: idPrefix + '_' + layerNum + '_' + imageNum + 'N',
-        type: 'DataImage',
-        value: 'Data',
-        width: elementSize[0] + 'px',
-        height: elementSize[1] + 'px'
-      },
-      position: {
-        x: offset + elementSize[0] / 2,
+    addNode(
+      cy,
+      formElemId(layer.type, { idPrefix: idPrefix, layerNum: layerNum, nodeNum: currBlock }),
+      layer.type,
+      {},
+      blockSize,
+      {
+        x: offset + blockSize.x / 2,
         y:
-          imageNum * layer.count[2] * nodeSize[1] + // offset по количеству пикселей в столбце.
-          imageNum * spacing +
-          elementSize[1] / 2 -
+          currBlock * (blockSize.y + spacing) + // offset по количеству пикселей в столбце.
+          blockSize.y / 2 -
           centerCoeff // Центруем относительно начального угла обзора.
       },
-      locked: true,
-      classes: ['dataImage']
-    })
+      ['dataImage', 'textTop', 'textContrast', 'border']
+    )
 
-    for (let h = 0; h < layer.count[1]; h++) {
-      for (let w = 0; w < layer.count[2]; w++) {
+    for (let h = 0; h < rows; h++) {
+      for (let w = 0; w < cols; w++) {
         // Добавляем сами данные.
-        cy.add({
-          group: 'nodes',
-          data: {
-            id: idPrefix + '_image_' + imageNum + '_' + layerNum + '_' + h + '_' + w + 'N',
-            type: 'DataImage',
-            value: layer.weights[imageNum][h][w],
-            width: nodeSize[0] + 'px',
-            height: nodeSize[1] + 'px'
+        addNode(
+          cy,
+          formElemId(layer.type + 'Cell', {
+            idPrefix: idPrefix,
+            layerNum: layerNum,
+            nodeNum: currBlock,
+            w: w,
+            h: h
+          }),
+          layer.type + 'Cell',
+          {
+            weight: layer.weights[currBlock][h][w],
+            maxWeight: maxWeight
           },
-          position: {
-            x: offset + w * nodeSize[0] + nodeSize[0] / 2,
+          nodeSize,
+          {
+            x: offset + w * nodeSize.x + nodeSize.x / 2,
             y:
-              imageNum * layer.count[2] * nodeSize[1] + // offset разных изображений в слое.
-              imageNum * spacing +
-              h * nodeSize[1] + // offset по номеру пикселя в строке.
-              nodeSize[1] / 2 -
+              currBlock * (blockSize.y + spacing) + // offset разных изображений в слое.
+              h * nodeSize.y + // offset по номеру пикселя в строке.
+              nodeSize.y / 2 -
               centerCoeff // Центруем относительно начального угла обзора.
           },
-          locked: true,
-          classes: ['data']
-        })
+          ['data', 'textCenter', 'textContrast', 'border']
+        )
       }
     }
   }
   // Возвращает offset для следующего слоя.
-  return offset + layer.count[1] * nodeSize[1] + STANDART_GRAPH_GAP
+  return offset + rows * nodeSize.x + STANDART_GRAPH_GAP
 }
 
 function addLinear(
@@ -136,30 +200,28 @@ function addLinear(
   layerNum,
   offset = 0,
   idPrefix = '',
-  nodeSize = [100, 40],
+  nodeSize = { x: 100, y: 40 },
   spacing = 50
 ) {
-  let centerCoeff = (layer.count * nodeSize[1] + spacing * (layer.count - 1)) / 2
+  let centerCoeff = (layer.count * nodeSize.y + spacing * (layer.count - 1)) / 2
   for (let nodeNum = 0; nodeNum < layer.count; nodeNum++) {
-    cy.add({
-      group: 'nodes',
-      data: {
-        id: idPrefix + '_' + layerNum + '_' + nodeNum + 'N',
-        type: 'Linear',
-        value: 'Linear\nbias:' + Number.parseFloat(layer.bias[nodeNum]).toFixed(4),
-        width: nodeSize[0] + 'px',
-        height: nodeSize[1] + 'px'
+    addNode(
+      cy,
+      formElemId(layer.type, { idPrefix: idPrefix, layerNum: layerNum, nodeNum: nodeNum }),
+      layer.type,
+      {
+        bias: layer.bias[nodeNum]
       },
-      position: {
-        x: offset + nodeSize[0] / 2,
-        y: (nodeSize[1] + spacing) * nodeNum + nodeSize[1] / 2 - centerCoeff // Центруем относительно начального угла обзора.
+      nodeSize,
+      {
+        x: offset + nodeSize.x / 2,
+        y: (nodeSize.y + spacing) * nodeNum + nodeSize.y / 2 - centerCoeff // Центруем относительно начального угла обзора.
       },
-      locked: true,
-      classes: ['linear']
-    })
+      ['linear', 'textCenter', 'textWhite', 'blackBorder']
+    )
   }
   // Возвращает offset для следующего слоя.
-  return offset + nodeSize[1] + STANDART_GRAPH_GAP
+  return offset + nodeSize.x + STANDART_GRAPH_GAP
 }
 
 function addActivation(
@@ -168,30 +230,28 @@ function addActivation(
   layerNum,
   offset = 0,
   idPrefix = '',
-  nodeSize = [100, 40],
+  nodeSize = { x: 100, y: 40 },
   spacing = 50
 ) {
-  let centerCoeff = (layer.count * nodeSize[1] + spacing * (layer.count - 1)) / 2
+  let centerCoeff = (layer.count * nodeSize.y + spacing * (layer.count - 1)) / 2
   for (let nodeNum = 0; nodeNum < layer.count; nodeNum++) {
-    cy.add({
-      group: 'nodes',
-      data: {
-        id: idPrefix + '_' + layerNum + '_' + nodeNum + 'N',
-        type: 'Activation',
-        value: 'Activation\ntype: ' + layer.activation,
-        width: nodeSize[0] + 'px',
-        height: nodeSize[1] + 'px'
+    addNode(
+      cy,
+      formElemId(layer.type, { idPrefix: idPrefix, layerNum: layerNum, nodeNum: nodeNum }),
+      layer.type,
+      {
+        actType: layer.activation
       },
-      position: {
-        x: offset + nodeSize[0] / 2,
-        y: (nodeSize[1] + spacing) * nodeNum + nodeSize[1] / 2 - centerCoeff // Центруем относительно начального угла обзора.
+      nodeSize,
+      {
+        x: offset + nodeSize.x / 2,
+        y: (nodeSize.y + spacing) * nodeNum + nodeSize.y / 2 - centerCoeff // Центруем относительно начального угла обзора.
       },
-      locked: true,
-      classes: ['activation']
-    })
+      ['activation', 'textCenter', 'textWhite', 'blackBorder']
+    )
   }
   // Возвращает offset для следующего слоя.
-  return offset + nodeSize[1] + STANDART_GRAPH_GAP
+  return offset + nodeSize.x + STANDART_GRAPH_GAP
 }
 
 function addConv2d(
@@ -200,66 +260,78 @@ function addConv2d(
   layerNum,
   offset = 0,
   idPrefix = '',
-  nodeSize = [50, 50],
+  nodeSize = { x: 50, y: 50 },
   spacing = 150
 ) {
-  let centerCoeff =
-    (layer.count[0] * layer.count[2] * nodeSize[1] + spacing * (layer.count[0] - 1)) / 2
-  for (let convNum = 0; convNum < layer.count[0]; convNum++) {
+  // Для отображения более ярким цветом элекментов с большим значением веса в слое.
+  let maxWeight = getMax(layer.weights)
+
+  let blocksN = layer.count[0]
+  let cols = layer.count[2]
+  let rows = layer.count[1]
+
+  let blockSize = { x: rows * nodeSize.x, y: cols * nodeSize.y }
+
+  let centerCoeff = (blocksN * cols * nodeSize.y + spacing * (blocksN - 1)) / 2
+  let elementSize = { x: rows * nodeSize.x, y: blockSize.y }
+  for (let currBlock = 0; currBlock < blocksN; currBlock++) {
     // Добавляем 1 node - который в себе будет содержать данные всего Conv2d.
-    let elementSize = [layer.count[1] * nodeSize[0], layer.count[2] * nodeSize[1]]
-    let constValues = 'Conv2d:' + '\npadding: ' + layer.padding + '\nstride: ' + layer.stride
-    cy.add({
-      group: 'nodes',
-      data: {
-        id: idPrefix + '_' + layerNum + '_' + convNum + 'N',
-        type: 'Conv2d',
-        constValues: constValues,
-        value: constValues + '\nbias: ' + Number.parseFloat(layer.bias[convNum]).toFixed(4),
-        width: elementSize[0] + nodeSize[0] / 2 + 'px',
-        height: elementSize[1] + nodeSize[1] / 2 + 'px'
+    addNode(
+      cy,
+      formElemId(layer.type, { idPrefix: idPrefix, layerNum: layerNum, nodeNum: currBlock }),
+      layer.type,
+      {
+        padding: layer.padding,
+        stride: layer.stride,
+        bias: layer.bias[currBlock]
       },
-      position: {
-        x: offset + elementSize[0] / 2,
+      {
+        x: elementSize.x + nodeSize.x / 2,
+        y: elementSize.y + nodeSize.y / 2
+      },
+      {
+        x: offset + elementSize.x / 2,
         y:
-          convNum * layer.count[2] * nodeSize[1] + // offset по количеству пикселей в столбце.
-          convNum * spacing +
-          elementSize[1] / 2 -
+          currBlock * (blockSize.y + spacing) + // offset по количеству пикселей в столбце.
+          elementSize.y / 2 -
           centerCoeff // Центруем относительно начального угла обзора.
       },
-      locked: true,
-      classes: ['convolution']
-    })
+      ['convolution', 'textTop', 'textContrast', 'border']
+    )
 
-    for (let h = 0; h < layer.count[1]; h++) {
-      for (let w = 0; w < layer.count[2]; w++) {
+    for (let h = 0; h < rows; h++) {
+      for (let w = 0; w < cols; w++) {
         // Добавляем данные фильтра.
-        cy.add({
-          group: 'nodes',
-          data: {
-            id: idPrefix + '_image_' + convNum + '_' + layerNum + '_' + h + '_' + w + 'N',
-            type: 'DataImage',
-            value: Number.parseFloat(layer.weights[convNum][h][w]).toFixed(3),
-            width: nodeSize[0] + 'px',
-            height: nodeSize[1] + 'px'
+        addNode(
+          cy,
+          formElemId(layer.type + 'Cell', {
+            idPrefix: idPrefix,
+            layerNum: layerNum,
+            nodeNum: currBlock,
+            w: w,
+            h: h
+          }),
+          layer.type + 'Cell',
+          {
+            weight: layer.weights[currBlock][h][w],
+            maxWeight: maxWeight
           },
-          position: {
-            x: offset + w * nodeSize[0] + nodeSize[0] / 2,
+          nodeSize,
+          {
+            x: offset + w * nodeSize.x + nodeSize.x / 2,
             y:
-              convNum * layer.count[2] * nodeSize[1] + // offset разных изображений в слое.
-              convNum * spacing +
-              h * nodeSize[1] + // offset по номеру пикселя в строке.
-              nodeSize[1] / 2 -
+              currBlock * (blockSize.y + spacing) + // offset разных изображений в слое.
+              h * nodeSize.y + // offset по номеру пикселя в строке.
+              nodeSize.y / 2 -
               centerCoeff // Центруем относительно начального угла обзора.
           },
-          locked: true,
-          classes: ['data']
-        })
+          ['data', 'textCenter', 'textContrast', 'border']
+        )
       }
     }
   }
   // Возвращает offset для следующего слоя.
-  return offset + layer.count[1] * nodeSize[1] + STANDART_GRAPH_GAP
+  return offset + rows * nodeSize.x + STANDART_GRAPH_GAP
 }
 
 function addMaxPool2d(
@@ -268,59 +340,92 @@ function addMaxPool2d(
   layerNum,
   offset = 0,
   idPrefix = '',
-  nodeSize = [100, 80],
+  nodeSize = { x: 100, y: 80 },
   spacing = 50
 ) {
-  let centerCoeff = (layer.count * nodeSize[1] + spacing * (layer.count - 1)) / 2
+  let centerCoeff = (layer.count * nodeSize.y + spacing * (layer.count - 1)) / 2
   for (let nodeNum = 0; nodeNum < layer.count; nodeNum++) {
-    cy.add({
-      group: 'nodes',
-      data: {
-        id: idPrefix + '_' + layerNum + '_' + nodeNum + 'N',
-        type: 'MaxPool2d',
-        value:
-          'MaxPool2d' +
-          '\nkernel size: ' +
-          layer.kernelSize +
-          '\npadding: ' +
-          layer.padding +
-          '\nstride: ' +
-          layer.stride,
-        width: nodeSize[0] + 'px',
-        height: nodeSize[1] + 'px'
+    addNode(
+      cy,
+      formElemId(layer.type, { idPrefix: idPrefix, layerNum: layerNum, nodeNum: nodeNum }),
+      layer.type,
+      {
+        kernelSize: layer.kernelSize,
+        padding: layer.padding,
+        stride: layer.stride
       },
-      position: {
-        x: offset + nodeSize[0] / 2,
-        y: (nodeSize[1] + spacing) * nodeNum + nodeSize[1] / 2 - centerCoeff // Центруем относительно начального угла обзора.
+      nodeSize,
+      {
+        x: offset + nodeSize.x / 2,
+        y: (nodeSize.y + spacing) * nodeNum + nodeSize.y / 2 - centerCoeff // Центруем относительно начального угла обзора.
       },
-      locked: true,
-      classes: ['activation']
-    })
+      ['maxPool2d', 'textCenter', 'textWhite', 'blackBorder']
+    )
   }
   // Возвращает offset для следующего слоя.
-  return offset + nodeSize[1] + STANDART_GRAPH_GAP
+  return offset + nodeSize.x + STANDART_GRAPH_GAP
 }
 
-function addMergeFlatten(cy, layer, layerNum, offset = 0, idPrefix = '', nodeSize = [100, 20]) {
+function addMergeFlatten(
+  cy,
+  layer,
+  layerNum,
+  offset = 0,
+  idPrefix = '',
+  nodeSize = { x: 100, y: 20 }
+) {
+  addNode(
+    cy,
+    formElemId(layer.type, { idPrefix: idPrefix, layerNum: layerNum, nodeNum: 0 }),
+    layer.type,
+    {},
+    nodeSize,
+    {
+      x: offset + nodeSize.x / 2,
+      y: 0
+    },
+    ['mergeFlatten', 'textCenter', 'textWhite', 'blackBorder']
+  )
+
+  // Возвращает offset для следующего слоя.
+  return offset + nodeSize.x + STANDART_GRAPH_GAP
+}
+
+function addReshape(cy, layer, layerNum, offset = 0, idPrefix = '', nodeSize = { x: 100, y: 20 }) {
+  addNode(
+    cy,
+    formElemId(layer.type, { idPrefix: idPrefix, layerNum: layerNum, nodeNum: 0 }),
+    layer.type,
+    {},
+    nodeSize,
+    {
+      x: offset + nodeSize.x / 2,
+      y: 0
+    },
+    ['reshape', 'textCenter', 'textWhite', 'blackBorder']
+  )
+
+  // Возвращает offset для следующего слоя.
+  return offset + nodeSize.x + STANDART_GRAPH_GAP
+}
+
+function addNode(cy, id, type, values, size, pos, classes) {
   cy.add({
     group: 'nodes',
     data: {
-      id: idPrefix + '_' + layerNum + '_' + 0 + 'N',
-      type: 'MergeFlatten',
-      value: 'Merge Flatten',
-      width: nodeSize[0] + 'px',
-      height: nodeSize[1] + 'px'
+      id: id,
+      type: type,
+      values: values,
+      width: size.x,
+      height: size.y
     },
     position: {
-      x: offset + nodeSize[0] / 2,
-      y: nodeSize[1] + nodeSize[1] / 2
+      x: pos.x,
+      y: pos.y
     },
     locked: true,
-    classes: ['activation']
+    classes: classes
   })
-
-  // Возвращает offset для следующего слоя.
-  return offset + nodeSize[1] + STANDART_GRAPH_GAP
 }
 
 function addConnection(cy, connection, connectionNum, idPrefix = '') {
@@ -340,17 +445,27 @@ function addConnection(cy, connection, connectionNum, idPrefix = '') {
       for (let sourceNum = 0; sourceNum < sources.length; sourceNum++) {
         addEdge(
           cy,
-          idPrefix + '_' + connectionNum + '_' + sourceNum + '_' + targNum + 'E',
+          formElemId(connection.type, {
+            idPrefix: idPrefix,
+            connNum: connectionNum,
+            sourceNum: sourceNum,
+            targetNum: targNum
+          }),
           sources[sourceNum].id(),
           targets[targNum].id(),
-          Number.parseFloat(connection.weights[targNum][sourceNum]).toFixed(4)
+          { weight: connection.weights[targNum][sourceNum] }
         )
       }
     } else {
       // Значит каждый узел предыдущего слоя связан с 1 узлом следующего слоя.
       addEdge(
         cy,
-        idPrefix + '_' + connectionNum + '_' + targNum + '_' + targNum + 'E',
+        formElemId(connection.type, {
+          idPrefix: idPrefix,
+          connNum: connectionNum,
+          sourceNum: targNum,
+          targetNum: targNum
+        }),
         sources[targNum].id(),
         targets[targNum].id()
       )
@@ -358,12 +473,13 @@ function addConnection(cy, connection, connectionNum, idPrefix = '') {
   }
 }
 
-function addEdge(cy, id, source, target, weight = NaN) {
+function addEdge(cy, id, source, target, values = {}) {
   let edgeParameters = {
     group: 'edges',
     data: {
       type: 'Connection',
       id: id,
+      values: values,
       source: source,
       target: target
     },
@@ -371,8 +487,7 @@ function addEdge(cy, id, source, target, weight = NaN) {
     classes: []
   }
 
-  if (!isNaN(weight)) {
-    edgeParameters.data.value = weight
+  if (Object.keys(edgeParameters.data.values).length !== 0) {
     edgeParameters.classes.push('ehasweights')
   } else {
     edgeParameters.classes.push('enothasweights')
@@ -380,4 +495,39 @@ function addEdge(cy, id, source, target, weight = NaN) {
 
   // Добавляем сформированную связь в граф.
   cy.add(edgeParameters)
+}
+
+function addNNframe(cy, name, loss, idPrefix) {
+  // Находим минимальные и максимальные значения x и y для отрисовки рамки нейронной сети.
+  let allNodes = cy.filter(function (element, i) {
+    let id = element.data('id')
+    return element.isNode() && id.startsWith(idPrefix + '_')
+  })
+  let minPoint = { x: allNodes[0].position().x, y: allNodes[0].position().y }
+  let maxPoint = { x: allNodes[0].position().x, y: allNodes[0].position().y }
+
+  for (let node of allNodes) {
+    let nodeHalfW = node.data('width') / 2
+    let nodeHalfH = node.data('height') / 2
+    minPoint.x = Math.min(minPoint.x, node.position().x - nodeHalfW)
+    minPoint.y = Math.min(minPoint.y, node.position().y - nodeHalfH)
+    maxPoint.x = Math.max(maxPoint.x, node.position().x + nodeHalfW)
+    maxPoint.y = Math.max(maxPoint.y, node.position().y + nodeHalfH)
+  }
+
+  addNode(
+    cy,
+    formElemId('Model', { idPrefix: idPrefix }),
+    'Model',
+    { name: name, loss: loss },
+    {
+      x: maxPoint.x - minPoint.x + STANDART_GRAPH_GAP,
+      y: maxPoint.y - minPoint.y + STANDART_GRAPH_GAP
+    },
+    {
+      x: (maxPoint.x + minPoint.x) / 2,
+      y: (maxPoint.y + minPoint.y) / 2
+    },
+    ['model', 'textTop', 'textContrast', 'border']
+  )
 }

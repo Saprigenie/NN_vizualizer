@@ -4,8 +4,8 @@
       <img
         src="./assets/logo.ico"
         alt="NN визуализатор обучения"
-        width="50"
-        height="50"
+        width="40"
+        height="40"
         class="ps-2 d-inline-block"
       />
     </router-link>
@@ -25,8 +25,12 @@
 
   <main>
     <router-view></router-view>
+    <ToasterComponent />
   </main>
 </template>
 
-<script setup></script>
+<script setup>
+import ToasterComponent from '@/components/utility/ToasterComponent.vue'
+</script>
+
 <style scoped></style>

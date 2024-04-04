@@ -4,12 +4,16 @@ from flask_session import Session
 
 from paths import api
 from session import init_session
+from neural_nets.utility.utility import remove_folder_content
+
+# Удаляем прошлые сессии перед стартом сервера.
+remove_folder_content("flask_session")
 
 # TO DO: добавить waitress для production сервера.
 app = Flask(__name__)
 app.config.from_pyfile('config.py')
 Session(app)
-CORS(app, supports_credentials=True)
+CORS(app, supports_credentials=True, expose_headers=["Content-Disposition"])
 api.init_app(app)
 
 

@@ -1,13 +1,21 @@
 from flask_restx import Namespace, Resource
-from flask import abort, session
+from flask import abort, session, send_file, request
+import torch
+import io
 
 from config import NN_NAMES
+from neural_nets.small_ann import SmallANN
 from neural_nets.ann import ANN
 from neural_nets.cnn import CNN
 from neural_nets.gan import GAN
+from datasets.load_dataset import load_digits_dataset, load_xor_dataset
 
 
 api = Namespace("nn", description="Операции с нейронными сетями.")
+datasets = [
+    load_xor_dataset(),
+    load_digits_dataset()
+]
 
 @api.route('/state/<nn_name>')
 class NNStates(Resource):
@@ -27,19 +35,12 @@ class NNTrain(Resource):
             abort(404)
         else:
             model = session.get(nn_name) 
-        
-        if model.state_forward:
-            weights_update = model.forward_graph_batch(session.get("digits_dataset"))
-        else:
-            model.train_batch(session.get("digits_dataset"))
-            weights_update = model.backward_graph_batch()
 
-
-        return weights_update
+        return model.graph_batch(datasets[model.dataset_i])
     
 @api.route('/restart/<nn_name>')
 class BatchSize(Resource):
-    def post(self, nn_name):
+    def put(self, nn_name):
         if not session.get(nn_name):
             abort(404)
         else:
@@ -49,10 +50,12 @@ class BatchSize(Resource):
         batch_size = model.batch_size
 
         if NN_NAMES[0] == nn_name:
-            session[nn_name] = ANN()
+            session[nn_name] = SmallANN()
         elif NN_NAMES[1] == nn_name:
-            session[nn_name] = CNN()
+            session[nn_name] = ANN()
         elif NN_NAMES[2] == nn_name:
+            session[nn_name] = CNN()
+        elif NN_NAMES[3] == nn_name:
             session[nn_name] = GAN()
 
         # Устанавливаем их заново.
@@ -62,14 +65,51 @@ class BatchSize(Resource):
         return 'Ok'
     
 
+@api.route('/batch_size/<nn_name>', defaults={'batch_size': 5})
 @api.route('/batch_size/<nn_name>/<batch_size>')
 class BatchSize(Resource):
-    def post(self, nn_name, batch_size):
+    def get(self, nn_name, batch_size):
+        if not session.get(nn_name):
+            abort(404)
+        else:
+            model = session.get(nn_name) 
+
+        return model.batch_size
+    
+    def put(self, nn_name, batch_size):
         if not session.get(nn_name):
             abort(404)
         else:
             model = session.get(nn_name) 
         
         model.set_batch_size(int(batch_size))
+
+        return 'Ok'
+    
+
+@api.route('/weights/<nn_name>')
+class Weights(Resource):
+    def get(self, nn_name):
+        if not session.get(nn_name):
+            abort(404)
+        else:
+            model = session.get(nn_name) 
+
+        weights_buffer = io.BytesIO()
+        torch.save(model.state_dict(), weights_buffer)
+
+        return send_file(io.BytesIO(weights_buffer.getbuffer()), download_name = model.name + ".pth", as_attachment=True)
+    
+    def post(self, nn_name):
+        if not session.get(nn_name):
+            abort(404)
+        else:
+            model = session.get(nn_name) 
+
+        weights = request.files['weights']
+
+        # TO DO: Ловля ошибок, потенциально небезопасная штучка.
+        model.load_state_dict(torch.load(weights))
+        model.eval()
 
         return 'Ok'
