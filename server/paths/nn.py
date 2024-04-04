@@ -4,14 +4,16 @@ import torch
 import io
 
 from config import NN_NAMES
+from neural_nets.small_ann import SmallANN
 from neural_nets.ann import ANN
 from neural_nets.cnn import CNN
 from neural_nets.gan import GAN
-from datasets.load_dataset import load_digits_dataset
+from datasets.load_dataset import load_digits_dataset, load_xor_dataset
 
 
 api = Namespace("nn", description="Операции с нейронными сетями.")
 datasets = [
+    load_xor_dataset(),
     load_digits_dataset()
 ]
 
@@ -34,7 +36,7 @@ class NNTrain(Resource):
         else:
             model = session.get(nn_name) 
 
-        return model.graph_batch(datasets[0])
+        return model.graph_batch(datasets[model.dataset_i])
     
 @api.route('/restart/<nn_name>')
 class BatchSize(Resource):
@@ -48,10 +50,12 @@ class BatchSize(Resource):
         batch_size = model.batch_size
 
         if NN_NAMES[0] == nn_name:
-            session[nn_name] = ANN()
+            session[nn_name] = SmallANN()
         elif NN_NAMES[1] == nn_name:
-            session[nn_name] = CNN()
+            session[nn_name] = ANN()
         elif NN_NAMES[2] == nn_name:
+            session[nn_name] = CNN()
+        elif NN_NAMES[3] == nn_name:
             session[nn_name] = GAN()
 
         # Устанавливаем их заново.

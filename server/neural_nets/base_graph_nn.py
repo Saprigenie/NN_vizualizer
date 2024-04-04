@@ -4,7 +4,7 @@ from .utility.utility import create_batch
 
 
 class BaseGraphNN(nn.Module):
-    def __init__(self, in_features, out_features, batch_size, name):
+    def __init__(self, in_features, out_features, batch_size, name, dataset_i):
         super().__init__()
         self.in_features = in_features
         self.out_features = out_features
@@ -13,7 +13,9 @@ class BaseGraphNN(nn.Module):
 
         # Слои нейронной сети, которая принимает in_features параметров и
         # выдает out_features параметров.
+        # ----- Структура сети -------
         pass
+        # ----------------------------
 
         # Также необходимо определить размер батча обучения нейронной сети, на какой мы эпохе и 
         # на каком индексе в тренировочном датасете мы остановились
@@ -21,6 +23,7 @@ class BaseGraphNN(nn.Module):
         self.batch_size = batch_size
         self.curr_epoch = 1
         self.train_i = 0
+        self.dataset_i = dataset_i
 
     def set_batch_size(self, batch_size):
         """

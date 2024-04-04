@@ -16,7 +16,8 @@ class CNN(BaseGraphNN):
             in_features=channels * w * h, 
             out_features = out_features, 
             batch_size = batch_size,
-            name = "cnn"
+            name = "cnn",
+            dataset_i = 1
         )
         self.channels = channels
         self.w = w
@@ -61,7 +62,7 @@ class CNN(BaseGraphNN):
         return result
 
     def forward(self, x):
-        # Так как изначально в датасете картинки преобразованы в одну линию, то нужно вернуть из обратно.
+        # Так как изначально в датасете картинки преобразованы в одну линию, то нужно вернуть их обратно.
         x = x.reshape(-1, 1, self.w, self.h)
 
         y = self.conv_1(x)

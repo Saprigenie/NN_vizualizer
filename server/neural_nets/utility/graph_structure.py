@@ -101,3 +101,12 @@ def graph_rep_add_flatten():
     })
 
     return structure
+
+def graph_rep_add_reshape():
+    structure = []
+
+    structure.append({
+        "type": "Reshape"
+    })
+
+    return structure

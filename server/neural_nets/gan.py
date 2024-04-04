@@ -1,19 +1,23 @@
 import torch
 import torch.nn as nn
+import numpy as np
 
 from .base_graph_nn import BaseGraphNN
 from .utility.utility import create_batch
-from .utility.graph_structure import graph_rep_add_data, graph_rep_add_connection, graph_rep_add_linear
+from .utility.graph_structure import graph_rep_add_data, graph_rep_add_connection, graph_rep_add_linear, graph_rep_add_image_data, graph_rep_add_flatten, graph_rep_add_reshape
 
 
 class GANgenerator(BaseGraphNN):
-    def __init__(self, in_features, out_features, batch_size = 1, optimizer = torch.optim.SGD, lr = 0.042):
+    def __init__(self, in_features, out_features, w = 8, h = 8, batch_size = 1, optimizer = torch.optim.SGD, lr = 0.042):
         super().__init__(
             in_features=in_features, 
             out_features = out_features, 
             batch_size = batch_size,
-            name = "generator"
+            name = "generator",
+            dataset_i = 1
         )
+        self.w = w
+        self.h = h
 
         # ----- Структура сети -------
         self.lin_1 = nn.Linear(in_features, 16)
@@ -64,6 +68,12 @@ class GANgenerator(BaseGraphNN):
         # Выходной слой.
         structure.extend(graph_rep_add_data(self.out_features, [0] * self.out_features))
 
+        # Добавляем изображение в качестве 1 слоя, чтобы пользователю было понятно, что это за датасет.
+        structure.extend(graph_rep_add_connection(np.zeros((1, self.out_features)).tolist(), False))
+        structure.extend(graph_rep_add_reshape())
+        structure.extend(graph_rep_add_connection(np.zeros((1, 1)).tolist(), False))
+        structure.extend(graph_rep_add_image_data([1, self.w, self.h], np.zeros((1, self.w, self.h)).tolist()))
+
         return {
             "model": self.name,
             "loss": self.loss_value,
@@ -98,6 +108,12 @@ class GANgenerator(BaseGraphNN):
         data_states.append({
             "graphLayerIndex": 16,
             "w": y.squeeze(0).tolist()
+        })
+
+        image_data = y.reshape(1, 1, self.w, self.h)
+        data_states.append({
+            "graphLayerIndex": 20,
+            "w": image_data.squeeze(0).tolist()
         })
 
         return data_states
@@ -145,13 +161,16 @@ class GANgenerator(BaseGraphNN):
 
 
 class GANdiscriminator(BaseGraphNN):
-    def __init__(self, in_features, out_features = 1, batch_size = 1, optimizer = torch.optim.SGD, lr = 0.042):
+    def __init__(self, in_features, w = 8, h = 8, out_features = 1, batch_size = 1, optimizer = torch.optim.SGD, lr = 0.042):
         super().__init__(
             in_features=in_features, 
             out_features = out_features, 
             batch_size = batch_size * 2, # Так как учится на двойном объеме данных (реальные/фейковые).
-            name = "discriminator"
+            name = "discriminator",
+            dataset_i = 1
         )
+        self.w = w
+        self.h = h
 
         # ----- Структура сети -------
         self.lin_1 = nn.Linear(in_features, 32)
@@ -179,6 +198,12 @@ class GANdiscriminator(BaseGraphNN):
     
     def graph_structure(self):
         structure = []
+
+        # Добавляем изображение в качестве 1 слоя, чтобы пользователю было понятно, что это за датасет.
+        structure.extend(graph_rep_add_image_data([1, self.w, self.h], np.zeros((1, self.w, self.h)).tolist()))
+        structure.extend(graph_rep_add_connection(np.zeros((1, 1)).tolist(), False))
+        structure.extend(graph_rep_add_flatten())
+        structure.extend(graph_rep_add_connection(np.zeros((self.in_features, 1)).tolist(), False))
 
         # Входной слой.
         structure.extend(graph_rep_add_data(self.in_features, [0] * self.in_features))
@@ -217,31 +242,36 @@ class GANdiscriminator(BaseGraphNN):
     def forward_graph(self, data):
         # Добавляем дополнительное измерение.
         data = data.unsqueeze(0)
+        image_data = data.reshape(1, 1, self.w, self.h)
 
         data_states = []
         data_states.append({
             "graphLayerIndex": 0,
+            "w": image_data.squeeze(0).tolist()
+        })
+        data_states.append({
+            "graphLayerIndex": 4,
             "w": data.squeeze(0).tolist()
         })
 
         y = self.lin_1(data)
         y = self.relu_1(y)
         data_states.append({
-            "graphLayerIndex": 6,
+            "graphLayerIndex": 10,
             "w": y.squeeze(0).tolist()
         })
 
         y = self.lin_2(y)
         y = self.relu_2(y)
         data_states.append({
-            "graphLayerIndex": 12,
+            "graphLayerIndex": 16,
             "w": y.squeeze(0).tolist()
         })
 
         y = self.lin_3(y)
         y = self.sigmoid(y)
         data_states.append({
-            "graphLayerIndex": 18,
+            "graphLayerIndex": 22,
             "w": y.squeeze(0).tolist()
         })
 
@@ -263,22 +293,22 @@ class GANdiscriminator(BaseGraphNN):
 
     def backward_graph_batch(self, train_dataset):
         weights_states = [{
-            "graphLayerIndex": 1,
+            "graphLayerIndex": 5,
             "w": self.lin_1.weight.tolist()
         }, {
-            "graphLayerIndex": 2,
+            "graphLayerIndex": 6,
             "w": self.lin_1.bias.tolist()
         }, {
-            "graphLayerIndex": 7,
+            "graphLayerIndex": 11,
             "w": self.lin_2.weight.tolist()
         }, {
-            "graphLayerIndex": 8,
+            "graphLayerIndex": 12,
             "w": self.lin_2.bias.tolist()
         }, {
-            "graphLayerIndex": 13,
+            "graphLayerIndex": 17,
             "w": self.lin_3.weight.tolist()
         }, {
-            "graphLayerIndex": 14,
+            "graphLayerIndex": 18,
             "w": self.lin_3.bias.tolist()
         }]
 
@@ -295,10 +325,11 @@ class GANdiscriminator(BaseGraphNN):
 class GAN(BaseGraphNN):
     def __init__(self, in_vector_size = 100, img_size = 64, batch_size = 1):
         super().__init__(
-            in_vector_size,
-            1,
-            batch_size,
-            "GAN"
+            in_features = in_vector_size,
+            out_features = 1,
+            batch_size = batch_size,
+            name = "GAN",
+            dataset_i = 1
         )
         self.in_vector_size = in_vector_size
         
