@@ -27,6 +27,9 @@ export function drawGraph(cy, graphData, name, loss, offset = 0, idPrefix = '') 
       case 'MergeFlatten':
         offset = addMergeFlatten(cy, layer, layerNum, offset, idPrefix)
         break
+      case 'Reshape':
+        offset = addReshape(cy, layer, layerNum, offset, idPrefix)
+        break
     }
   }
   // Добавляем связи.
@@ -53,6 +56,7 @@ export function formElemId(type, params) {
     case 'Conv2d':
     case 'MaxPool2d':
     case 'MergeFlatten':
+    case 'Reshape':
       return params.idPrefix + '_' + params.layerNum + '_' + params.nodeNum + 'N'
     case 'DataImageCell':
     case 'Conv2dCell':
@@ -381,6 +385,24 @@ function addMergeFlatten(
       y: 0
     },
     ['mergeFlatten', 'textCenter', 'textWhite', 'blackBorder']
+  )
+
+  // Возвращает offset для следующего слоя.
+  return offset + nodeSize.x + STANDART_GRAPH_GAP
+}
+
+function addReshape(cy, layer, layerNum, offset = 0, idPrefix = '', nodeSize = { x: 100, y: 20 }) {
+  addNode(
+    cy,
+    formElemId(layer.type, { idPrefix: idPrefix, layerNum: layerNum, nodeNum: 0 }),
+    layer.type,
+    {},
+    nodeSize,
+    {
+      x: offset + nodeSize.x / 2,
+      y: 0
+    },
+    ['reshape', 'textCenter', 'textWhite', 'blackBorder']
   )
 
   // Возвращает offset для следующего слоя.

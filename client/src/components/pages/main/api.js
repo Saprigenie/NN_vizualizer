@@ -22,6 +22,7 @@ let nnOldStates = {
 export async function setGraphElements(cy, nnName) {
   // С сервера приходит список с узлами и связями.
   let graphData = (await api.get('/nn/state/' + nnName)).data
+  console.log(graphData)
   let offset = 0
 
   for (let i = 0; i < graphData.length; i++) {
@@ -127,7 +128,7 @@ export function nnBackServer(cy, nnNameServer) {
     // Обновляем последний слой старыми весами.
     let oldLayer = forwardWeights.dataIndex
       ? forwardWeights.weights[forwardWeights.dataIndex - 1][forwardWeights.layerIndex]
-      : oldState.forwardWeights.weights[forwardWeights.weights.length - 1][
+      : oldState.forwardWeights.weights[oldState.forwardWeights.weights.length - 1][
           forwardWeights.layerIndex
         ]
     updateWeights(cy, oldLayer.graphLayerIndex, oldLayer.w, modelName)

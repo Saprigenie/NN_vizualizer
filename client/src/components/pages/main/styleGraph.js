@@ -124,6 +124,14 @@ export let graphStyles = [
   },
 
   {
+    selector: '.reshape',
+    style: {
+      content: (elem) => 'Reshape',
+      shape: 'cut-rectangle'
+    }
+  },
+
+  {
     selector: '.convolution',
     style: {
       content: (elem) =>

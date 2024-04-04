@@ -48,6 +48,11 @@
         </button>
         <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
           <li>
+            <button class="dropdown-item nav-link" v-on:click="reloadNN(cy, 'smallann')">
+              Small ANN (Маленькая версия полносвязной нейронной сети)
+            </button>
+          </li>
+          <li>
             <button class="dropdown-item nav-link" v-on:click="reloadNN(cy, 'ann')">
               ANN (Полносвязная нейронная сеть)
             </button>
