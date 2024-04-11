@@ -22,7 +22,6 @@ let nnOldStates = {
 export async function setGraphElements(cy, nnName) {
   // С сервера приходит список с узлами и связями.
   let graphData = (await api.get('/nn/state/' + nnName)).data
-  console.log(graphData)
   let offset = 0
 
   for (let i = 0; i < graphData.length; i++) {
