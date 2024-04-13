@@ -8,11 +8,12 @@ from .utility.graph_structure import graph_rep_add_data, graph_rep_add_connectio
 
 
 class GANgenerator(BaseGraphNN):
-    def __init__(self, in_features, out_features, w = 8, h = 8, batch_size = 1, optimizer = torch.optim.SGD, lr = 0.042):
+    def __init__(self, in_features, out_features, w = 8, h = 8, batch_size = 1, optimizer = torch.optim.SGD, lr = 0.05):
         super().__init__(
             in_features=in_features, 
             out_features = out_features, 
             batch_size = batch_size,
+            lr = lr,
             name = "generator",
             dataset_i = 1
         )
@@ -161,11 +162,12 @@ class GANgenerator(BaseGraphNN):
 
 
 class GANdiscriminator(BaseGraphNN):
-    def __init__(self, in_features, w = 8, h = 8, out_features = 1, batch_size = 1, optimizer = torch.optim.SGD, lr = 0.042):
+    def __init__(self, in_features, w = 8, h = 8, out_features = 1, batch_size = 1, optimizer = torch.optim.SGD, lr = 0.05):
         super().__init__(
             in_features=in_features, 
             out_features = out_features, 
             batch_size = batch_size * 2, # Так как учится на двойном объеме данных (реальные/фейковые).
+            lr = lr,
             name = "discriminator",
             dataset_i = 1
         )
@@ -323,11 +325,12 @@ class GANdiscriminator(BaseGraphNN):
 
 
 class GAN(BaseGraphNN):
-    def __init__(self, in_vector_size = 100, img_size = 64, batch_size = 1):
+    def __init__(self, in_vector_size = 100, img_size = 64, batch_size = 1, lr = 0.05):
         super().__init__(
             in_features = in_vector_size,
             out_features = 1,
             batch_size = batch_size,
+            lr = lr,
             name = "GAN",
             dataset_i = 1
         )
@@ -347,6 +350,11 @@ class GAN(BaseGraphNN):
         self.batch_size = batch_size
         self.generator.set_batch_size(batch_size)
         self.discriminator.set_batch_size(batch_size)
+
+    def set_lr(self, lr):
+        self.lr = lr
+        self.generator.set_lr(lr)
+        self.discriminator.set_lr(lr)
     
     def train_generator_batch(self):
         ## Тренируем генератор

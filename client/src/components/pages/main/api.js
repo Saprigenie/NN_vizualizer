@@ -201,6 +201,21 @@ export async function getBatchSizeServer(nnName) {
   return (await api.get('/nn/batch_size/' + nnName)).data
 }
 
+export async function setLearnRateServer(nnName, learnRate, toaster) {
+  await api.put('/nn/learn_rate/' + nnName + '/' + learnRate).then((res) => {
+    // Добавляем сообщение пользователю.
+    toaster.addToast({
+      title: 'Информация',
+      body: 'Скорость обучения успешно обновлена.',
+      type: ToastTypes.success
+    })
+  })
+}
+
+export async function getLearnRateServer(nnName) {
+  return (await api.get('/nn/learn_rate/' + nnName)).data
+}
+
 export async function nnRestartServer(cy, nnName, toaster) {
   await api.put('/nn/restart/' + nnName).then((res) => {
     // Добавляем сообщение пользователю.
