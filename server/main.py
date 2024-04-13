@@ -1,6 +1,7 @@
 from flask import Flask
 from flask_cors import CORS
 from flask_session import Session
+from waitress import serve
 
 from paths import api
 from session import init_session
@@ -9,7 +10,6 @@ from neural_nets.utility.utility import remove_folder_content
 # Удаляем прошлые сессии перед стартом сервера.
 remove_folder_content("flask_session")
 
-# TO DO: добавить waitress для production сервера.
 app = Flask(__name__)
 app.config.from_pyfile('config.py')
 Session(app)
@@ -28,4 +28,4 @@ if __name__ == "__main__":
     if app.config.get('DEBUG'):
         app.run(host='0.0.0.0', port=port)
     else:
-        app.run()
+        serve(app, host='0.0.0.0', port=port)
