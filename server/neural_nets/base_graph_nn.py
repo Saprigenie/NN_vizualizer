@@ -4,7 +4,7 @@ from .utility.utility import create_batch
 
 
 class BaseGraphNN(nn.Module):
-    def __init__(self, in_features, out_features, batch_size, name, dataset_i):
+    def __init__(self, in_features, out_features, batch_size, lr, name, dataset_i):
         super().__init__()
         self.in_features = in_features
         self.out_features = out_features
@@ -21,6 +21,7 @@ class BaseGraphNN(nn.Module):
         # на каком индексе в тренировочном датасете мы остановились
         # для удобства.
         self.batch_size = batch_size
+        self.lr = lr
         self.curr_epoch = 1
         self.train_i = 0
         self.dataset_i = dataset_i
@@ -30,6 +31,15 @@ class BaseGraphNN(nn.Module):
         Устанавливает размер батча обучения нейронной сети.
         """
         self.batch_size = batch_size
+
+    def set_lr(self, lr):
+        """
+        Устанавливает размер батча обучения нейронной сети.
+        """
+        self.lr = lr
+        if self.optimizer:
+            for g in self.optimizer.param_groups:
+                g['lr'] = lr
 
     def set_optimizer(self, optimizer, lr):
         """

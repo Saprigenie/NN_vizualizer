@@ -9,11 +9,12 @@ from .utility.graph_structure import graph_rep_add_data, graph_rep_add_connectio
 
 class SmallANN(BaseGraphNN):
     def __init__(self, in_features = 2, out_features = 2, dimensions = 1, batch_size = 1, 
-                 loss_function = nn.CrossEntropyLoss, optimizer = torch.optim.SGD, lr = 0.042):
+                 loss_function = nn.CrossEntropyLoss, optimizer = torch.optim.SGD, lr = 0.5):
         super().__init__(
             in_features=in_features, 
             out_features = out_features, 
             batch_size = batch_size,
+            lr = lr,
             name = "smallann",
             dataset_i = 0
         )

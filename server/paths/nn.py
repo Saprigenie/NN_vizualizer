@@ -87,6 +87,28 @@ class BatchSize(Resource):
         return 'Ok'
     
 
+@api.route('/learn_rate/<nn_name>', defaults={'lr': 0.05})
+@api.route('/learn_rate/<nn_name>/<lr>')
+class BatchSize(Resource):
+    def get(self, nn_name, lr):
+        if not session.get(nn_name):
+            abort(404)
+        else:
+            model = session.get(nn_name) 
+
+        return model.lr
+    
+    def put(self, nn_name, lr):
+        if not session.get(nn_name):
+            abort(404)
+        else:
+            model = session.get(nn_name) 
+        
+        model.set_lr(float(lr))
+
+        return 'Ok'
+    
+
 @api.route('/weights/<nn_name>')
 class Weights(Resource):
     def get(self, nn_name):

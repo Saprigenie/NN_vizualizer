@@ -101,6 +101,35 @@
         </ul>
       </li>
 
+      <li class="nav-item dropdown">
+        <button
+          class="nav-link dropdown-toggle"
+          type="button"
+          id="dropdownMenuButton2"
+          data-bs-toggle="dropdown"
+          aria-expanded="false"
+        >
+          Скорость обучения: {{ learnRate }}
+        </button>
+        <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton2">
+          <li>
+            <button class="dropdown-item nav-link" v-on:click="setLearnRate(0.025)">0.025</button>
+          </li>
+          <li>
+            <button class="dropdown-item nav-link" v-on:click="setLearnRate(0.05)">0.05</button>
+          </li>
+          <li>
+            <button class="dropdown-item nav-link" v-on:click="setLearnRate(0.1)">0.1</button>
+          </li>
+          <li>
+            <button class="dropdown-item nav-link" v-on:click="setLearnRate(0.5)">0.5</button>
+          </li>
+          <li>
+            <button class="dropdown-item nav-link" v-on:click="setLearnRate(1)">1</button>
+          </li>
+        </ul>
+      </li>
+
       <div class="vr ms-2 me-2"></div>
 
       <li class="nav-item">
@@ -195,7 +224,9 @@ import {
   nnForwardServer,
   nnBackServer,
   setBatchSizeServer,
+  setLearnRateServer,
   getBatchSizeServer,
+  getLearnRateServer,
   nnRestartServer,
   downloadWeightsServer,
   uploadWeightsServer
@@ -209,6 +240,8 @@ let cy
 let nnNameChoice = ref('ann')
 // Выбранный размера батча.
 let batchSize = ref(2)
+// Выбранный размер скорости обучения.
+let learnRate = ref(0.05)
 // Текущий шаг обучения.
 let trainStep = reactive({
   data: { curr: '?', max: '?' },
@@ -246,6 +279,7 @@ async function reloadNN(cy, newChoice) {
   nnNameChoice.value = newChoice
   setGraphElements(cy, nnNameChoice.value)
   batchSize.value = await getBatchSizeServer(nnNameChoice.value)
+  learnRate.value = await getLearnRateServer(nnNameChoice.value)
   backEnable.value = false
 }
 
@@ -268,6 +302,11 @@ async function nnBack() {
 function setBatchSize(newBatchSize) {
   batchSize.value = newBatchSize
   setBatchSizeServer(nnNameChoice.value, batchSize.value, toaster)
+}
+
+function setLearnRate(newLearnRate) {
+  learnRate.value = newLearnRate
+  setLearnRateServer(nnNameChoice.value, learnRate.value, toaster)
 }
 </script>
 
