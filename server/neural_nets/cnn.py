@@ -10,7 +10,7 @@ from .utility.graph_structure import graph_rep_add_image_data, graph_rep_add_con
 
 
 class CNN(BaseGraphNN):
-    def __init__(self, channels = 1, w = 8, h = 8, out_features = 10,  num_filters = 4, dimensions = 1, batch_size = 1, 
+    def __init__(self, channels = 1, w = 8, h = 8, out_features = 10,  num_filters = 4, dimensions = 1, batch_size = 5, 
                  loss_function = nn.CrossEntropyLoss, optimizer = torch.optim.SGD, lr = 0.05):
         super().__init__(
             in_features=channels * w * h, 

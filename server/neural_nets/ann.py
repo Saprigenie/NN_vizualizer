@@ -8,7 +8,7 @@ from .utility.graph_structure import graph_rep_add_data, graph_rep_add_connectio
 
 
 class ANN(BaseGraphNN):
-    def __init__(self, in_features = 64, w = 8, h = 8, out_features = 10, dimensions = 1, batch_size = 1, 
+    def __init__(self, in_features = 64, w = 8, h = 8, out_features = 10, dimensions = 1, batch_size = 5, 
                  loss_function = nn.CrossEntropyLoss, optimizer = torch.optim.SGD, lr = 0.05):
         super().__init__(
             in_features=in_features, 
