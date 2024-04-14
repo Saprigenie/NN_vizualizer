@@ -203,7 +203,7 @@
       <div class="col">
         <button
           class="btn btn-dark float-end"
-          v-on:click="nnRestartServer(cy, nnNameChoice, toaster)"
+          v-on:click="nnRestart()"
           data-bs-toggle="tooltip"
           data-bs-placement="top"
           title="Полностью сбрасывает текущий процесс обучения нейронной сети."
@@ -307,6 +307,11 @@ function setBatchSize(newBatchSize) {
 function setLearnRate(newLearnRate) {
   learnRate.value = newLearnRate
   setLearnRateServer(nnNameChoice.value, learnRate.value, toaster)
+}
+
+function nnRestart() {
+  backEnable.value = false
+  nnRestartServer(cy, nnNameChoice.value, toaster)
 }
 </script>
 
