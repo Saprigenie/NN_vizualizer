@@ -3,8 +3,8 @@ import torch.nn as nn
 import numpy as np
 
 from .base_graph_nn import BaseGraphNN
-from .utility.utility import create_batch
-from .utility.graph_structure import graph_rep_add_data, graph_rep_add_connection, graph_rep_add_linear, graph_rep_add_image_data, graph_rep_add_flatten, graph_rep_add_reshape
+from utility import create_batch
+from .graph_rep.graph_structure import graph_rep_add_data, graph_rep_add_connection, graph_rep_add_linear, graph_rep_add_image_data, graph_rep_add_flatten, graph_rep_add_reshape
 
 
 class GANgenerator(BaseGraphNN):
