@@ -3,19 +3,6 @@ import os
 import shutil
 
 
-def get_children(model: torch.nn.Module):
-    children = list(model.children())
-    flatt_children = []
-    if children == []:
-        return model
-    else:
-       for child in children:
-            try:
-                flatt_children.extend(get_children(child))
-            except TypeError:
-                flatt_children.append(get_children(child))
-    return flatt_children
-
 def create_batch(dataset, start_i, batch_size):
     # Особый случай, батч вышел за пределы датасета.
     if start_i + batch_size > len(dataset):

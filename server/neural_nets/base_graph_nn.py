@@ -1,6 +1,6 @@
 import torch.nn as nn
 
-from .utility.utility import create_batch
+from utility import create_batch
 
 
 class BaseGraphNN(nn.Module):

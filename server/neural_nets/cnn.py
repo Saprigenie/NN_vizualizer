@@ -4,9 +4,9 @@ import numpy as np
 from math import floor
 
 from .base_graph_nn import BaseGraphNN
-from .utility.utility import create_batch
-from .utility.graph_structure import graph_rep_add_data, graph_rep_add_connection, graph_rep_add_linear
-from .utility.graph_structure import graph_rep_add_image_data, graph_rep_add_conv2d, graph_rep_add_maxpool2d, graph_rep_add_flatten
+from utility import create_batch
+from .graph_rep.graph_structure import graph_rep_add_data, graph_rep_add_connection, graph_rep_add_linear
+from .graph_rep.graph_structure import graph_rep_add_image_data, graph_rep_add_conv2d, graph_rep_add_maxpool2d, graph_rep_add_flatten
 
 
 class CNN(BaseGraphNN):

@@ -5,7 +5,7 @@ from waitress import serve
 
 from paths import api
 from session import init_session
-from neural_nets.utility.utility import remove_folder_content
+from utility import remove_folder_content
 
 # Удаляем прошлые сессии перед стартом сервера.
 remove_folder_content("flask_session")
