@@ -219,6 +219,7 @@
 import cytoscape from 'cytoscape'
 import * as bootstrap from 'bootstrap'
 import { onMounted, reactive, ref } from 'vue'
+
 import {
   setGraphElements,
   nnForwardServer,

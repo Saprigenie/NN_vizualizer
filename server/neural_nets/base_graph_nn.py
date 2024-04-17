@@ -34,7 +34,7 @@ class BaseGraphNN(nn.Module):
 
     def set_lr(self, lr):
         """
-        Устанавливает размер батча обучения нейронной сети.
+        Устанавливает скорость обучения нейронной сети.
         """
         self.lr = lr
         if self.optimizer:
@@ -43,13 +43,13 @@ class BaseGraphNN(nn.Module):
 
     def set_optimizer(self, optimizer, lr):
         """
-        Задает оптимизатор, который будет использовтаь нейронная сеть:
+        Задает оптимизатор, который будет использовать нейронная сеть:
         """
         self.optimizer = optimizer(self.parameters(), lr)
 
     def set_loss_function(self, loss_function):
         """
-        Задает функцию потерь, которую будет использовтаь нейронная сеть:
+        Задает функцию потерь, которую будет использовать нейронная сеть:
         """
         self.loss_function = loss_function()
 
