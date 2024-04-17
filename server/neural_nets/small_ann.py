@@ -3,19 +3,31 @@ import torch.nn as nn
 
 from .base_graph_nn import BaseGraphNN
 from utility import create_batch
-from .graph_rep.graph_structure import graph_rep_add_data, graph_rep_add_connection, graph_rep_add_linear
+from .graph_rep.graph_structure import (
+    graph_rep_add_data,
+    graph_rep_add_connection,
+    graph_rep_add_linear,
+)
 
 
 class SmallANN(BaseGraphNN):
-    def __init__(self, in_features = 2, out_features = 2, dimensions = 1, batch_size = 2, 
-                 loss_function = nn.CrossEntropyLoss, optimizer = torch.optim.SGD, lr = 0.5):
+    def __init__(
+        self,
+        in_features=2,
+        out_features=2,
+        dimensions=1,
+        batch_size=2,
+        loss_function=nn.CrossEntropyLoss,
+        optimizer=torch.optim.SGD,
+        lr=0.5,
+    ):
         super().__init__(
-            in_features=in_features, 
-            out_features = out_features, 
-            batch_size = batch_size,
-            lr = lr,
-            name = "smallann",
-            dataset_i = 0
+            in_features=in_features,
+            out_features=out_features,
+            batch_size=batch_size,
+            lr=lr,
+            name="smallann",
+            dataset_i=0,
         )
 
         # ----- Структура сети -------
@@ -33,7 +45,7 @@ class SmallANN(BaseGraphNN):
         y = self.lin_2(y)
         y = self.softmax(y)
         return y
-    
+
     def train_batch(self, train_dataset):
         x_batch, y_batch = create_batch(train_dataset, self.train_i, self.batch_size)
 
@@ -59,7 +71,7 @@ class SmallANN(BaseGraphNN):
 
         # Обновляем текущий loss_value
         self.loss_value = loss.detach().cpu().numpy().item()
-    
+
     def graph_structure(self):
         structure = []
 
@@ -73,7 +85,9 @@ class SmallANN(BaseGraphNN):
         structure.extend(graph_rep_add_connection([0] * layer.weight.shape[0], False))
 
         # Промежуточные данные.
-        structure.extend(graph_rep_add_data(layer.weight.shape[0], [0] * layer.weight.shape[0]))
+        structure.extend(
+            graph_rep_add_data(layer.weight.shape[0], [0] * layer.weight.shape[0])
+        )
 
         layer = self.lin_2
         structure.extend(graph_rep_add_connection(layer.weight.tolist()))
@@ -83,55 +97,35 @@ class SmallANN(BaseGraphNN):
         # Выходной слой.
         structure.extend(graph_rep_add_data(self.out_features, [0] * self.out_features))
 
-        return [{
-            "model": self.name,
-            "loss": self.loss_value,
-            "structure": structure
-        }]
-    
+        return [{"model": self.name, "loss": self.loss_value, "structure": structure}]
+
     def forward_graph(self, data):
         # Добавляем дополнительное измерение.
         # Индексы слоев получаем из graph_structure.
         data = data.unsqueeze(0)
 
         data_states = []
-        data_states.append({
-            "graphLayerIndex": 0,
-            "w": data.squeeze(0).tolist()
-        })
+        data_states.append({"graphLayerIndex": 0, "w": data.squeeze(0).tolist()})
 
         y = self.relu(self.lin_1(data))
-        data_states.append({
-            "graphLayerIndex": 6,
-            "w": y.squeeze(0).tolist()
-        })
+        data_states.append({"graphLayerIndex": 6, "w": y.squeeze(0).tolist()})
 
         y = self.lin_2(y)
         y = self.softmax(y)
-        data_states.append({
-            "graphLayerIndex": 12,
-            "w": y.squeeze(0).tolist()
-        })
+        data_states.append({"graphLayerIndex": 12, "w": y.squeeze(0).tolist()})
 
         return data_states
 
     def backward_graph_batch(self, train_dataset):
-        weights_states = [{
-            "graphLayerIndex": 1,
-            "w": self.lin_1.weight.tolist()
-        }, {
-            "graphLayerIndex": 2,
-            "w": self.lin_1.bias.tolist()
-        }, {
-            "graphLayerIndex": 7,
-            "w": self.lin_2.weight.tolist()
-        }, {
-            "graphLayerIndex": 8,
-            "w": self.lin_2.bias.tolist()
-        }]
+        weights_states = [
+            {"graphLayerIndex": 1, "w": self.lin_1.weight.tolist()},
+            {"graphLayerIndex": 2, "w": self.lin_1.bias.tolist()},
+            {"graphLayerIndex": 7, "w": self.lin_2.weight.tolist()},
+            {"graphLayerIndex": 8, "w": self.lin_2.bias.tolist()},
+        ]
 
         return {
             "dataIndex": 0,
             "layerIndex": 0,
-            "weights": list(reversed(weights_states))
+            "weights": list(reversed(weights_states)),
         }

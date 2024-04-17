@@ -12,12 +12,10 @@ from datasets.load_dataset import load_digits_dataset, load_xor_dataset
 
 
 api = Namespace("nn", description="Операции с нейронными сетями.")
-datasets = [
-    load_xor_dataset(),
-    load_digits_dataset()
-]
+datasets = [load_xor_dataset(), load_digits_dataset()]
 
-@api.route('/state/<nn_name>')
+
+@api.route("/state/<nn_name>")
 class NNStates(Resource):
     def get(self, nn_name):
         if not session.get(nn_name):
@@ -27,25 +25,27 @@ class NNStates(Resource):
 
         structure = model.graph_structure()
         return structure
-    
-@api.route('/train/<nn_name>')
+
+
+@api.route("/train/<nn_name>")
 class NNTrain(Resource):
     def get(self, nn_name):
         if not session.get(nn_name):
             abort(404)
         else:
-            model = session.get(nn_name) 
+            model = session.get(nn_name)
 
         return model.graph_batch(datasets[model.dataset_i])
-    
-@api.route('/restart/<nn_name>')
-class BatchSize(Resource):
+
+
+@api.route("/restart/<nn_name>")
+class NNRestart(Resource):
     def put(self, nn_name):
         if not session.get(nn_name):
             abort(404)
         else:
-            model = session.get(nn_name) 
-        
+            model = session.get(nn_name)
+
         # Сохраняем некоторые параметры, которые не хотим потерять.
         batch_size = model.batch_size
 
@@ -62,76 +62,80 @@ class BatchSize(Resource):
         model = session.get(nn_name)
         model.set_batch_size(batch_size)
 
-        return 'Ok'
-    
+        return "Ok"
 
-@api.route('/batch_size/<nn_name>', defaults={'batch_size': 5})
-@api.route('/batch_size/<nn_name>/<batch_size>')
+
+@api.route("/batch_size/<nn_name>", defaults={"batch_size": 5})
+@api.route("/batch_size/<nn_name>/<batch_size>")
 class BatchSize(Resource):
     def get(self, nn_name, batch_size):
         if not session.get(nn_name):
             abort(404)
         else:
-            model = session.get(nn_name) 
+            model = session.get(nn_name)
 
         return model.batch_size
-    
+
     def put(self, nn_name, batch_size):
         if not session.get(nn_name):
             abort(404)
         else:
-            model = session.get(nn_name) 
-        
+            model = session.get(nn_name)
+
         model.set_batch_size(int(batch_size))
 
-        return 'Ok'
-    
+        return "Ok"
 
-@api.route('/learn_rate/<nn_name>', defaults={'lr': 0.05})
-@api.route('/learn_rate/<nn_name>/<lr>')
-class BatchSize(Resource):
+
+@api.route("/learn_rate/<nn_name>", defaults={"lr": 0.05})
+@api.route("/learn_rate/<nn_name>/<lr>")
+class LearnRate(Resource):
     def get(self, nn_name, lr):
         if not session.get(nn_name):
             abort(404)
         else:
-            model = session.get(nn_name) 
+            model = session.get(nn_name)
 
         return model.lr
-    
+
     def put(self, nn_name, lr):
         if not session.get(nn_name):
             abort(404)
         else:
-            model = session.get(nn_name) 
-        
+            model = session.get(nn_name)
+
         model.set_lr(float(lr))
 
-        return 'Ok'
-    
+        return "Ok"
 
-@api.route('/weights/<nn_name>')
+
+@api.route("/weights/<nn_name>")
 class Weights(Resource):
     def get(self, nn_name):
         if not session.get(nn_name):
             abort(404)
         else:
-            model = session.get(nn_name) 
+            model = session.get(nn_name)
 
         weights_buffer = io.BytesIO()
         torch.save(model.state_dict(), weights_buffer)
 
-        return send_file(io.BytesIO(weights_buffer.getbuffer()), download_name = model.name + ".pth", as_attachment=True)
-    
+        return send_file(
+            io.BytesIO(weights_buffer.getbuffer()),
+            download_name=model.name + ".pth",
+            as_attachment=True,
+        )
+
     def post(self, nn_name):
         if not session.get(nn_name):
             abort(404)
         else:
-            model = session.get(nn_name) 
+            model = session.get(nn_name)
 
-        weights = request.files['weights']
+        weights = request.files["weights"]
 
         # TO DO: Ловля ошибок, потенциально небезопасная штучка.
         model.load_state_dict(torch.load(weights))
         model.eval()
 
-        return 'Ok'
+        return "Ok"

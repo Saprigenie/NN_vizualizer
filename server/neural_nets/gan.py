@@ -4,18 +4,34 @@ import numpy as np
 
 from .base_graph_nn import BaseGraphNN
 from utility import create_batch
-from .graph_rep.graph_structure import graph_rep_add_data, graph_rep_add_connection, graph_rep_add_linear, graph_rep_add_image_data, graph_rep_add_flatten, graph_rep_add_reshape
+from .graph_rep.graph_structure import (
+    graph_rep_add_data,
+    graph_rep_add_connection,
+    graph_rep_add_linear,
+    graph_rep_add_image_data,
+    graph_rep_add_flatten,
+    graph_rep_add_reshape,
+)
 
 
 class GANgenerator(BaseGraphNN):
-    def __init__(self, in_features, out_features, w = 8, h = 8, batch_size = 5, optimizer = torch.optim.SGD, lr = 0.05):
+    def __init__(
+        self,
+        in_features,
+        out_features,
+        w=8,
+        h=8,
+        batch_size=5,
+        optimizer=torch.optim.SGD,
+        lr=0.05,
+    ):
         super().__init__(
-            in_features=in_features, 
-            out_features = out_features, 
-            batch_size = batch_size,
-            lr = lr,
-            name = "generator",
-            dataset_i = 1
+            in_features=in_features,
+            out_features=out_features,
+            batch_size=batch_size,
+            lr=lr,
+            name="generator",
+            dataset_i=1,
         )
         self.w = w
         self.h = h
@@ -37,7 +53,7 @@ class GANgenerator(BaseGraphNN):
         y = self.relu_2(y)
         y = self.lin_3(y)
         return y
-    
+
     def graph_structure(self):
         structure = []
 
@@ -51,7 +67,9 @@ class GANgenerator(BaseGraphNN):
         structure.extend(graph_rep_add_connection([0] * layer.weight.shape[0], False))
 
         # Промежуточные данные.
-        structure.extend(graph_rep_add_data(layer.weight.shape[0], [0] * layer.weight.shape[0]))
+        structure.extend(
+            graph_rep_add_data(layer.weight.shape[0], [0] * layer.weight.shape[0])
+        )
 
         layer = self.lin_2
         structure.extend(graph_rep_add_connection(layer.weight.tolist()))
@@ -59,7 +77,9 @@ class GANgenerator(BaseGraphNN):
         structure.extend(graph_rep_add_connection([0] * layer.weight.shape[0], False))
 
         # Промежуточные данные.
-        structure.extend(graph_rep_add_data(layer.weight.shape[0], [0] * layer.weight.shape[0]))
+        structure.extend(
+            graph_rep_add_data(layer.weight.shape[0], [0] * layer.weight.shape[0])
+        )
 
         layer = self.lin_3
         structure.extend(graph_rep_add_connection(layer.weight.tolist()))
@@ -70,55 +90,42 @@ class GANgenerator(BaseGraphNN):
         structure.extend(graph_rep_add_data(self.out_features, [0] * self.out_features))
 
         # Добавляем изображение в качестве 1 слоя, чтобы пользователю было понятно, что это за датасет.
-        structure.extend(graph_rep_add_connection(np.zeros((1, self.out_features)).tolist(), False))
+        structure.extend(
+            graph_rep_add_connection(np.zeros((1, self.out_features)).tolist(), False)
+        )
         structure.extend(graph_rep_add_reshape())
         structure.extend(graph_rep_add_connection(np.zeros((1, 1)).tolist(), False))
-        structure.extend(graph_rep_add_image_data([1, self.w, self.h], np.zeros((1, self.w, self.h)).tolist()))
+        structure.extend(
+            graph_rep_add_image_data(
+                [1, self.w, self.h], np.zeros((1, self.w, self.h)).tolist()
+            )
+        )
 
-        return {
-            "model": self.name,
-            "loss": self.loss_value,
-            "structure": structure
-        }
-    
+        return {"model": self.name, "loss": self.loss_value, "structure": structure}
+
     def forward_graph(self, data):
         # Добавляем дополнительное измерение.
         data = data.unsqueeze(0)
 
         data_states = []
-        data_states.append({
-            "graphLayerIndex": 0,
-            "w": data.squeeze(0).tolist()
-        })
+        data_states.append({"graphLayerIndex": 0, "w": data.squeeze(0).tolist()})
 
         y = self.lin_1(data)
         y = self.relu_1(y)
-        data_states.append({
-            "graphLayerIndex": 6,
-            "w": y.squeeze(0).tolist()
-        })
+        data_states.append({"graphLayerIndex": 6, "w": y.squeeze(0).tolist()})
 
         y = self.lin_2(y)
         y = self.relu_2(y)
-        data_states.append({
-            "graphLayerIndex": 12,
-            "w": y.squeeze(0).tolist()
-        })
+        data_states.append({"graphLayerIndex": 12, "w": y.squeeze(0).tolist()})
 
         y = self.lin_3(y)
-        data_states.append({
-            "graphLayerIndex": 16,
-            "w": y.squeeze(0).tolist()
-        })
+        data_states.append({"graphLayerIndex": 16, "w": y.squeeze(0).tolist()})
 
         image_data = y.reshape(1, 1, self.w, self.h)
-        data_states.append({
-            "graphLayerIndex": 20,
-            "w": image_data.squeeze(0).tolist()
-        })
+        data_states.append({"graphLayerIndex": 20, "w": image_data.squeeze(0).tolist()})
 
         return data_states
-    
+
     def forward_graph_batch(self, train_dataset, train_i):
         x_batch, _ = create_batch(train_dataset, train_i, self.batch_size)
         # Подменяем данные на рандомный тензор, так как это стандартный вход для генератора.
@@ -127,49 +134,50 @@ class GANgenerator(BaseGraphNN):
         return {
             "dataIndex": 0,
             "layerIndex": 0,
-            "weights": [self.forward_graph(data) for data in x_batch]
+            "weights": [self.forward_graph(data) for data in x_batch],
         }
 
     def backward_graph_batch(self, train_dataset):
-        weights_states = [{
-            "graphLayerIndex": 1,
-            "w": self.lin_1.weight.tolist()
-        }, {
-            "graphLayerIndex": 2,
-            "w": self.lin_1.bias.tolist()
-        }, {
-            "graphLayerIndex": 7,
-            "w": self.lin_2.weight.tolist()
-        }, {
-            "graphLayerIndex": 8,
-            "w": self.lin_2.bias.tolist()
-        }, {
-            "graphLayerIndex": 13,
-            "w": self.lin_3.weight.tolist()
-        }, {
-            "graphLayerIndex": 14,
-            "w": self.lin_3.bias.tolist()
-        }]
+        weights_states = [
+            {"graphLayerIndex": 1, "w": self.lin_1.weight.tolist()},
+            {"graphLayerIndex": 2, "w": self.lin_1.bias.tolist()},
+            {"graphLayerIndex": 7, "w": self.lin_2.weight.tolist()},
+            {"graphLayerIndex": 8, "w": self.lin_2.bias.tolist()},
+            {"graphLayerIndex": 13, "w": self.lin_3.weight.tolist()},
+            {"graphLayerIndex": 14, "w": self.lin_3.bias.tolist()},
+        ]
 
         return {
             "dataIndex": 0,
             "layerIndex": 0,
-            "weights": list(reversed(weights_states))
+            "weights": list(reversed(weights_states)),
         }
-    
+
     def graph_batch(self, forward_weights, backward_weights, train_dataset, train_i):
-        return self.form_train_state("forward", forward_weights, backward_weights, len(train_dataset), train_i)
+        return self.form_train_state(
+            "forward", forward_weights, backward_weights, len(train_dataset), train_i
+        )
 
 
 class GANdiscriminator(BaseGraphNN):
-    def __init__(self, in_features, w = 8, h = 8, out_features = 1, batch_size = 5, optimizer = torch.optim.SGD, lr = 0.05):
+    def __init__(
+        self,
+        in_features,
+        w=8,
+        h=8,
+        out_features=1,
+        batch_size=5,
+        optimizer=torch.optim.SGD,
+        lr=0.05,
+    ):
         super().__init__(
-            in_features=in_features, 
-            out_features = out_features, 
-            batch_size = batch_size * 2, # Так как учится на двойном объеме данных (реальные/фейковые).
-            lr = lr,
-            name = "discriminator",
-            dataset_i = 1
+            in_features=in_features,
+            out_features=out_features,
+            batch_size=batch_size
+            * 2,  # Так как учится на двойном объеме данных (реальные/фейковые).
+            lr=lr,
+            name="discriminator",
+            dataset_i=1,
         )
         self.w = w
         self.h = h
@@ -187,7 +195,7 @@ class GANdiscriminator(BaseGraphNN):
         self.set_optimizer(optimizer, lr)
 
     def set_batch_size(self, batch_size):
-        return super().set_batch_size(batch_size * 2) 
+        return super().set_batch_size(batch_size * 2)
 
     def forward(self, x):
         y = self.lin_1(x)
@@ -197,15 +205,21 @@ class GANdiscriminator(BaseGraphNN):
         y = self.lin_3(y)
         y = self.sigmoid(y)
         return y
-    
+
     def graph_structure(self):
         structure = []
 
         # Добавляем изображение в качестве 1 слоя, чтобы пользователю было понятно, что это за датасет.
-        structure.extend(graph_rep_add_image_data([1, self.w, self.h], np.zeros((1, self.w, self.h)).tolist()))
+        structure.extend(
+            graph_rep_add_image_data(
+                [1, self.w, self.h], np.zeros((1, self.w, self.h)).tolist()
+            )
+        )
         structure.extend(graph_rep_add_connection(np.zeros((1, 1)).tolist(), False))
         structure.extend(graph_rep_add_flatten())
-        structure.extend(graph_rep_add_connection(np.zeros((self.in_features, 1)).tolist(), False))
+        structure.extend(
+            graph_rep_add_connection(np.zeros((self.in_features, 1)).tolist(), False)
+        )
 
         # Входной слой.
         structure.extend(graph_rep_add_data(self.in_features, [0] * self.in_features))
@@ -217,7 +231,9 @@ class GANdiscriminator(BaseGraphNN):
         structure.extend(graph_rep_add_connection([0] * layer.weight.shape[0], False))
 
         # Промежуточные данные.
-        structure.extend(graph_rep_add_data(layer.weight.shape[0], [0] * layer.weight.shape[0]))
+        structure.extend(
+            graph_rep_add_data(layer.weight.shape[0], [0] * layer.weight.shape[0])
+        )
 
         layer = self.lin_2
         structure.extend(graph_rep_add_connection(layer.weight.tolist()))
@@ -225,7 +241,9 @@ class GANdiscriminator(BaseGraphNN):
         structure.extend(graph_rep_add_connection([0] * layer.weight.shape[0], False))
 
         # Промежуточные данные.
-        structure.extend(graph_rep_add_data(layer.weight.shape[0], [0] * layer.weight.shape[0]))
+        structure.extend(
+            graph_rep_add_data(layer.weight.shape[0], [0] * layer.weight.shape[0])
+        )
 
         layer = self.lin_3
         structure.extend(graph_rep_add_connection(layer.weight.tolist()))
@@ -233,52 +251,35 @@ class GANdiscriminator(BaseGraphNN):
         structure.extend(graph_rep_add_connection([0] * layer.weight.shape[0], False))
 
         # Выходной слой.
-        structure.extend(graph_rep_add_data(layer.weight.shape[0], [0] * layer.weight.shape[0]))
+        structure.extend(
+            graph_rep_add_data(layer.weight.shape[0], [0] * layer.weight.shape[0])
+        )
 
-        return {
-            "model": self.name,
-            "loss": self.loss_value,
-            "structure": structure
-        }
-    
+        return {"model": self.name, "loss": self.loss_value, "structure": structure}
+
     def forward_graph(self, data):
         # Добавляем дополнительное измерение.
         data = data.unsqueeze(0)
         image_data = data.reshape(1, 1, self.w, self.h)
 
         data_states = []
-        data_states.append({
-            "graphLayerIndex": 0,
-            "w": image_data.squeeze(0).tolist()
-        })
-        data_states.append({
-            "graphLayerIndex": 4,
-            "w": data.squeeze(0).tolist()
-        })
+        data_states.append({"graphLayerIndex": 0, "w": image_data.squeeze(0).tolist()})
+        data_states.append({"graphLayerIndex": 4, "w": data.squeeze(0).tolist()})
 
         y = self.lin_1(data)
         y = self.relu_1(y)
-        data_states.append({
-            "graphLayerIndex": 10,
-            "w": y.squeeze(0).tolist()
-        })
+        data_states.append({"graphLayerIndex": 10, "w": y.squeeze(0).tolist()})
 
         y = self.lin_2(y)
         y = self.relu_2(y)
-        data_states.append({
-            "graphLayerIndex": 16,
-            "w": y.squeeze(0).tolist()
-        })
+        data_states.append({"graphLayerIndex": 16, "w": y.squeeze(0).tolist()})
 
         y = self.lin_3(y)
         y = self.sigmoid(y)
-        data_states.append({
-            "graphLayerIndex": 22,
-            "w": y.squeeze(0).tolist()
-        })
+        data_states.append({"graphLayerIndex": 22, "w": y.squeeze(0).tolist()})
 
         return data_states
-    
+
     def forward_graph_batch(self, train_dataset, generator, train_i):
         # Половина батча - реальные данные, половина - фейковые.
         x_batch, _ = create_batch(train_dataset, train_i, self.batch_size // 2)
@@ -290,52 +291,47 @@ class GANdiscriminator(BaseGraphNN):
         return {
             "dataIndex": 0,
             "layerIndex": 0,
-            "weights": [self.forward_graph(data) for data in x_batch]
+            "weights": [self.forward_graph(data) for data in x_batch],
         }
 
     def backward_graph_batch(self, train_dataset):
-        weights_states = [{
-            "graphLayerIndex": 5,
-            "w": self.lin_1.weight.tolist()
-        }, {
-            "graphLayerIndex": 6,
-            "w": self.lin_1.bias.tolist()
-        }, {
-            "graphLayerIndex": 11,
-            "w": self.lin_2.weight.tolist()
-        }, {
-            "graphLayerIndex": 12,
-            "w": self.lin_2.bias.tolist()
-        }, {
-            "graphLayerIndex": 17,
-            "w": self.lin_3.weight.tolist()
-        }, {
-            "graphLayerIndex": 18,
-            "w": self.lin_3.bias.tolist()
-        }]
+        weights_states = [
+            {"graphLayerIndex": 5, "w": self.lin_1.weight.tolist()},
+            {"graphLayerIndex": 6, "w": self.lin_1.bias.tolist()},
+            {"graphLayerIndex": 11, "w": self.lin_2.weight.tolist()},
+            {"graphLayerIndex": 12, "w": self.lin_2.bias.tolist()},
+            {"graphLayerIndex": 17, "w": self.lin_3.weight.tolist()},
+            {"graphLayerIndex": 18, "w": self.lin_3.bias.tolist()},
+        ]
 
         return {
             "dataIndex": 0,
             "layerIndex": 0,
-            "weights": list(reversed(weights_states))
+            "weights": list(reversed(weights_states)),
         }
-    
+
     def graph_batch(self, forward_weights, backward_weights, train_dataset, train_i):
-        return self.form_train_state("forward", forward_weights, backward_weights, 2 * len(train_dataset), 2 * train_i)
+        return self.form_train_state(
+            "forward",
+            forward_weights,
+            backward_weights,
+            2 * len(train_dataset),
+            2 * train_i,
+        )
 
 
 class GAN(BaseGraphNN):
-    def __init__(self, in_vector_size = 100, img_size = 64, batch_size = 5, lr = 0.05):
+    def __init__(self, in_vector_size=100, img_size=64, batch_size=5, lr=0.05):
         super().__init__(
-            in_features = in_vector_size,
-            out_features = 1,
-            batch_size = batch_size,
-            lr = lr,
-            name = "GAN",
-            dataset_i = 1
+            in_features=in_vector_size,
+            out_features=1,
+            batch_size=batch_size,
+            lr=lr,
+            name="GAN",
+            dataset_i=1,
         )
         self.in_vector_size = in_vector_size
-        
+
         # Кто обучается сейчас.
         self.generator_training = True
 
@@ -355,7 +351,7 @@ class GAN(BaseGraphNN):
         self.lr = lr
         self.generator.set_lr(lr)
         self.discriminator.set_lr(lr)
-    
+
     def train_generator_batch(self):
         ## Тренируем генератор
         # Создаем шум для генератора:
@@ -396,8 +392,10 @@ class GAN(BaseGraphNN):
         input_d = torch.cat([x_batch, generated_imgs], dim=0)
         outputs = self.discriminator(input_d)
         # Создаем метки (1 - настоящее изображение, 0 - сгенерированное)
-        y_generator = torch.cat([torch.ones((x_batch.shape[0], 1)),
-                                torch.zeros((x_batch.shape[0], 1))], dim=0)
+        y_generator = torch.cat(
+            [torch.ones((x_batch.shape[0], 1)), torch.zeros((x_batch.shape[0], 1))],
+            dim=0,
+        )
         # Считаем функцию потерь:
         loss_d = self.loss_function(outputs, y_generator)
         # Делаем шаг в обратном направлении:
@@ -410,7 +408,7 @@ class GAN(BaseGraphNN):
         if self.train_i >= len(train_dataset):
             self.train_i = 0
             self.curr_epoch += 1
-        
+
         # Обновляем текущий loss_value
         self.discriminator.loss_value = loss_d.detach().cpu().numpy().item()
 
@@ -424,23 +422,27 @@ class GAN(BaseGraphNN):
         self.generator_training = not self.generator_training
 
     def graph_structure(self):
-        return [
-            self.generator.graph_structure(),
-            self.discriminator.graph_structure()
-        ]
-        
+        return [self.generator.graph_structure(), self.discriminator.graph_structure()]
+
     def graph_batch(self, train_dataset):
         # Узнаем, у кого сейчас обучение.
         if self.generator_training:
-            forward_weights = self.generator.forward_graph_batch(train_dataset, self.train_i)
+            forward_weights = self.generator.forward_graph_batch(
+                train_dataset, self.train_i
+            )
             self.train_batch(train_dataset)
             backward_weights = self.generator.backward_graph_batch(train_dataset)
 
-            return self.generator.graph_batch(forward_weights, backward_weights, train_dataset, self.train_i)
+            return self.generator.graph_batch(
+                forward_weights, backward_weights, train_dataset, self.train_i
+            )
         else:
-            forward_weights = self.discriminator.forward_graph_batch(train_dataset, self.generator, self.train_i)
+            forward_weights = self.discriminator.forward_graph_batch(
+                train_dataset, self.generator, self.train_i
+            )
             self.train_batch(train_dataset)
             backward_weights = self.discriminator.backward_graph_batch(train_dataset)
 
-            return self.discriminator.graph_batch(forward_weights, backward_weights, train_dataset, self.train_i)
-    
+            return self.discriminator.graph_batch(
+                forward_weights, backward_weights, train_dataset, self.train_i
+            )

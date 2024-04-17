@@ -11,7 +11,7 @@ from utility import remove_folder_content
 remove_folder_content("flask_session")
 
 app = Flask(__name__)
-app.config.from_pyfile('config.py')
+app.config.from_pyfile("config.py")
 Session(app)
 CORS(app, supports_credentials=True, expose_headers=["Content-Disposition"])
 api.init_app(app)
@@ -23,9 +23,16 @@ def before_request_func():
 
 
 if __name__ == "__main__":
-    port = app.config.get('FLASK_PORT')
+    port = app.config.get("FLASK_PORT")
 
-    if app.config.get('DEBUG'):
-        app.run(host='0.0.0.0', port=port)
+    if app.config.get("DEBUG"):
+        app.run(host="0.0.0.0", port=port)
     else:
-        serve(app, host='0.0.0.0', port=port)
+        serve(
+            app,
+            host="0.0.0.0",
+            port=port,
+            connection_limit=100,
+            cleanup_interval=5,
+            channel_timeout=30,
+        )

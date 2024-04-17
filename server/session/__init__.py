@@ -15,7 +15,4 @@ def init_session():
         session[NN_NAMES[0]] = SmallANN()
         session[NN_NAMES[1]] = ANN()
         session[NN_NAMES[2]] = CNN()
-        session[NN_NAMES[3]] = GAN() 
-        
-
-        
+        session[NN_NAMES[3]] = GAN()
