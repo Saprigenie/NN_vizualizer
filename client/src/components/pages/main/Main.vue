@@ -1,149 +1,169 @@
 <template>
-  <nav class="navbar navbar-expand">
-    <ul class="navbar-nav mr-auto">
-      <li class="nav-item dropdown">
-        <button
-          class="nav-link dropdown-toggle ms-2"
-          type="button"
-          id="dropdownMenuButton1"
-          data-bs-toggle="dropdown"
-          aria-expanded="false"
-        >
-          Веса
-        </button>
-        <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
-          <li>
-            <button class="dropdown-item nav-link" v-on:click="downloadWeightsServer(nnNameChoice)">
-              Сохранить текущие веса модели
+  <nav class="navbar navbar-expand-lg">
+    <div class="container-fluid">
+      <button
+        class="navbar-toggler"
+        type="button"
+        data-bs-toggle="collapse"
+        data-bs-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent"
+        aria-expanded="false"
+        aria-label="Toggle navigation"
+      >
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav mr-auto">
+          <li class="nav-item dropdown">
+            <button
+              class="nav-link dropdown-toggle ms-2"
+              type="button"
+              id="dropdownMenuButton1"
+              data-bs-toggle="dropdown"
+              aria-expanded="false"
+            >
+              Веса
             </button>
+            <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
+              <li>
+                <button
+                  class="dropdown-item nav-link"
+                  v-on:click="downloadWeightsServer(nnNameChoice)"
+                >
+                  Сохранить текущие веса модели
+                </button>
+              </li>
+
+              <li>
+                <input
+                  id="setWeightInp"
+                  type="file"
+                  style="display: none"
+                  v-on:change="
+                    (ev) => uploadWeightsServer(cy, nnNameChoice, ev.target.files[0], toaster)
+                  "
+                />
+                <button class="dropdown-item nav-link" v-on:click="showWeightsChooser()">
+                  Загрузить новые веса модели
+                </button>
+              </li>
+            </ul>
           </li>
 
-          <li>
-            <input
-              id="setWeightInp"
-              type="file"
-              style="display: none"
-              v-on:change="
-                (ev) => uploadWeightsServer(cy, nnNameChoice, ev.target.files[0], toaster)
-              "
-            />
-            <button class="dropdown-item nav-link" v-on:click="showWeightsChooser()">
-              Загрузить новые веса модели
+          <div class="vr d-none d-lg-block ms-2 me-2"></div>
+
+          <li class="nav-item dropdown">
+            <button
+              class="nav-link dropdown-toggle"
+              type="button"
+              id="dropdownMenuButton1"
+              data-bs-toggle="dropdown"
+              aria-expanded="false"
+            >
+              Модель NN: {{ nnNameChoice.toUpperCase() }}
+            </button>
+            <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
+              <li>
+                <button class="dropdown-item nav-link" v-on:click="reloadNN(cy, 'smallann')">
+                  Small ANN (Маленькая версия полносвязной нейронной сети)
+                </button>
+              </li>
+              <li>
+                <button class="dropdown-item nav-link" v-on:click="reloadNN(cy, 'ann')">
+                  ANN (Полносвязная нейронная сеть)
+                </button>
+              </li>
+
+              <li>
+                <button class="dropdown-item nav-link" v-on:click="reloadNN(cy, 'cnn')">
+                  CNN (Сверточная нейронная сеть)
+                </button>
+              </li>
+
+              <li>
+                <button class="dropdown-item nav-link" v-on:click="reloadNN(cy, 'gan')">
+                  GAN (Генеративная нейронная сеть)
+                </button>
+              </li>
+            </ul>
+          </li>
+
+          <li class="nav-item dropdown">
+            <button
+              class="nav-link dropdown-toggle"
+              type="button"
+              id="dropdownMenuButton2"
+              data-bs-toggle="dropdown"
+              aria-expanded="false"
+            >
+              Размер батча: {{ batchSize }}
+            </button>
+            <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton2">
+              <li>
+                <button class="dropdown-item nav-link" v-on:click="setBatchSize(1)">1</button>
+              </li>
+              <li>
+                <button class="dropdown-item nav-link" v-on:click="setBatchSize(2)">2</button>
+              </li>
+              <li>
+                <button class="dropdown-item nav-link" v-on:click="setBatchSize(5)">5</button>
+              </li>
+              <li>
+                <button class="dropdown-item nav-link" v-on:click="setBatchSize(10)">10</button>
+              </li>
+              <li>
+                <button class="dropdown-item nav-link" v-on:click="setBatchSize(64)">64</button>
+              </li>
+            </ul>
+          </li>
+
+          <li class="nav-item dropdown">
+            <button
+              class="nav-link dropdown-toggle"
+              type="button"
+              id="dropdownMenuButton2"
+              data-bs-toggle="dropdown"
+              aria-expanded="false"
+            >
+              Скорость обучения: {{ learnRate }}
+            </button>
+            <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton2">
+              <li>
+                <button class="dropdown-item nav-link" v-on:click="setLearnRate(0.025)">
+                  0.025
+                </button>
+              </li>
+              <li>
+                <button class="dropdown-item nav-link" v-on:click="setLearnRate(0.05)">0.05</button>
+              </li>
+              <li>
+                <button class="dropdown-item nav-link" v-on:click="setLearnRate(0.1)">0.1</button>
+              </li>
+              <li>
+                <button class="dropdown-item nav-link" v-on:click="setLearnRate(0.5)">0.5</button>
+              </li>
+              <li>
+                <button class="dropdown-item nav-link" v-on:click="setLearnRate(1)">1</button>
+              </li>
+            </ul>
+          </li>
+
+          <div class="vr d-none d-lg-block ms-2 me-2"></div>
+
+          <li class="nav-item">
+            <button
+              class="btn float-start"
+              v-on:click="cy.fit()"
+              data-bs-toggle="tooltip"
+              data-bs-placement="bottom"
+              title="Возвращает камеру для отображения структуры нейронной сети."
+            >
+              <i class="bi bi bi-eye"></i>
             </button>
           </li>
         </ul>
-      </li>
-
-      <div class="vr ms-2 me-2"></div>
-
-      <li class="nav-item dropdown">
-        <button
-          class="nav-link dropdown-toggle"
-          type="button"
-          id="dropdownMenuButton1"
-          data-bs-toggle="dropdown"
-          aria-expanded="false"
-        >
-          Модель NN: {{ nnNameChoice.toUpperCase() }}
-        </button>
-        <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
-          <li>
-            <button class="dropdown-item nav-link" v-on:click="reloadNN(cy, 'smallann')">
-              Small ANN (Маленькая версия полносвязной нейронной сети)
-            </button>
-          </li>
-          <li>
-            <button class="dropdown-item nav-link" v-on:click="reloadNN(cy, 'ann')">
-              ANN (Полносвязная нейронная сеть)
-            </button>
-          </li>
-
-          <li>
-            <button class="dropdown-item nav-link" v-on:click="reloadNN(cy, 'cnn')">
-              CNN (Сверточная нейронная сеть)
-            </button>
-          </li>
-
-          <li>
-            <button class="dropdown-item nav-link" v-on:click="reloadNN(cy, 'gan')">
-              GAN (Генеративная нейронная сеть)
-            </button>
-          </li>
-        </ul>
-      </li>
-
-      <li class="nav-item dropdown">
-        <button
-          class="nav-link dropdown-toggle"
-          type="button"
-          id="dropdownMenuButton2"
-          data-bs-toggle="dropdown"
-          aria-expanded="false"
-        >
-          Размер батча: {{ batchSize }}
-        </button>
-        <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton2">
-          <li>
-            <button class="dropdown-item nav-link" v-on:click="setBatchSize(1)">1</button>
-          </li>
-          <li>
-            <button class="dropdown-item nav-link" v-on:click="setBatchSize(2)">2</button>
-          </li>
-          <li>
-            <button class="dropdown-item nav-link" v-on:click="setBatchSize(5)">5</button>
-          </li>
-          <li>
-            <button class="dropdown-item nav-link" v-on:click="setBatchSize(10)">10</button>
-          </li>
-          <li>
-            <button class="dropdown-item nav-link" v-on:click="setBatchSize(64)">64</button>
-          </li>
-        </ul>
-      </li>
-
-      <li class="nav-item dropdown">
-        <button
-          class="nav-link dropdown-toggle"
-          type="button"
-          id="dropdownMenuButton2"
-          data-bs-toggle="dropdown"
-          aria-expanded="false"
-        >
-          Скорость обучения: {{ learnRate }}
-        </button>
-        <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton2">
-          <li>
-            <button class="dropdown-item nav-link" v-on:click="setLearnRate(0.025)">0.025</button>
-          </li>
-          <li>
-            <button class="dropdown-item nav-link" v-on:click="setLearnRate(0.05)">0.05</button>
-          </li>
-          <li>
-            <button class="dropdown-item nav-link" v-on:click="setLearnRate(0.1)">0.1</button>
-          </li>
-          <li>
-            <button class="dropdown-item nav-link" v-on:click="setLearnRate(0.5)">0.5</button>
-          </li>
-          <li>
-            <button class="dropdown-item nav-link" v-on:click="setLearnRate(1)">1</button>
-          </li>
-        </ul>
-      </li>
-
-      <div class="vr ms-2 me-2"></div>
-
-      <li class="nav-item">
-        <button
-          class="btn float-start"
-          v-on:click="cy.fit()"
-          data-bs-toggle="tooltip"
-          data-bs-placement="bottom"
-          title="Возвращает камеру для отображения структуры нейронной сети."
-        >
-          <i class="bi bi bi-eye"></i>
-        </button>
-      </li>
-    </ul>
+      </div>
+    </div>
   </nav>
 
   <div id="cy"></div>
