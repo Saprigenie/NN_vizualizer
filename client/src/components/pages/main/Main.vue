@@ -337,11 +337,6 @@ function nnRestart() {
 </script>
 
 <style scoped>
-#cy {
-  width: 100%;
-  height: 550px;
-}
-
 .trainStep {
   position: fixed;
   bottom: 50px;
@@ -350,10 +345,15 @@ function nnRestart() {
   height: 40px;
 }
 
+.navbar {
+  flex: 0 1 auto;
+}
+
+#cy {
+  flex: 1 1 auto;
+}
+
 footer {
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-  height: 50px;
+  flex: 0 1 50px;
 }
 </style>

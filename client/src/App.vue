@@ -33,4 +33,14 @@
 import ToasterComponent from '@/components/utility/ToasterComponent.vue'
 </script>
 
-<style scoped></style>
+<style scoped>
+nav {
+  flex: 0 1 auto;
+}
+
+main {
+  display: flex;
+  flex-flow: column;
+  flex: 1 1 auto;
+}
+</style>
