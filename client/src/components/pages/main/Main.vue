@@ -179,26 +179,9 @@
     </div>
   </div>
 
-  <footer class="footer bg-dark">
-    <div class="row text-center p-2">
-      <div class="col">
-        <!-- <button
-          class="btn btn-dark float-start"
-          data-bs-toggle="tooltip"
-          data-bs-placement="top"
-          title="Возвращает на 1 эпоху обучения нейронной сети назад."
-        >
-          <i class="bi bi-chevron-double-left text-light"></i>
-        </button>
-        <button
-          class="btn btn-dark float-start"
-          data-bs-toggle="tooltip"
-          data-bs-placement="top"
-          title="Пропускает 1 эпоху обучения нейронной сети."
-        >
-          <i class="bi bi-chevron-double-right text-light"></i>
-        </button> -->
-      </div>
+  <footer class="footer container-fluid bg-dark">
+    <div class="row text-center">
+      <div class="col"></div>
       <div class="col">
         <button
           class="btn btn-dark"
