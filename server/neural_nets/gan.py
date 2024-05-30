@@ -379,7 +379,7 @@ class GAN(BaseGraphNN):
     def train_discriminator_batch(self, train_dataset):
         x_batch, _ = create_batch(train_dataset, self.train_i, self.batch_size)
         # Создаем шум для генератора:
-        x_noise = torch.randn(self.batch_size, self.in_vector_size)
+        x_noise = torch.randn(x_batch.shape[0], self.in_vector_size)
 
         ## Тренируем дискриминатор:
         # Переводим дискриминатор в режим обучения:
